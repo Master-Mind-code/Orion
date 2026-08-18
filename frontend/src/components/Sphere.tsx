@@ -41,6 +41,9 @@ export function Sphere({
   const particlesRef = useRef<(Pt3 & { tx: number; ty: number; tz: number })[]>([]);
   const stateRef = useRef<SphereState>(state);
   const isFlatRef = useRef(false);
+  // onShapeChange via ref pour ne pas relancer le cycle à chaque render parent
+  const onShapeChangeRef = useRef(onShapeChange);
+  useEffect(() => { onShapeChangeRef.current = onShapeChange; }, [onShapeChange]);
 
   // Sync state dans une ref (évite recreation de la boucle anim)
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -77,14 +80,14 @@ export function Sphere({
         }
       }
       isFlatRef.current = FLAT_SHAPES.has(name);
-      onShapeChange?.(name);
+      onShapeChangeRef.current?.(name);
     };
     const interval = window.setInterval(() => {
       idx = (idx + 1) % SHAPES.length;
       setShape(SHAPES[idx]);
     }, cycleMs);
     return () => window.clearInterval(interval);
-  }, [cycleMs, nParticles, size, onShapeChange]);
+  }, [cycleMs, nParticles, size]);
 
   // Boucle d'animation
   useEffect(() => {
