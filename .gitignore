@@ -44,3 +44,6 @@ build/
 
 # Scripts de test perso (à toi de décider — décommente pour ignorer)
 # gem_api.py
+
+# Config MCP locale (chemins machine-specifiques ; l example est commite)
+mcp_servers.json

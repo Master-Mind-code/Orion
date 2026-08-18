@@ -9,8 +9,14 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from .automation import ensure_dpi_aware
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DIR = ROOT / "data" / "screenshots"
+
+# Sans ça, sur écran mis à l'échelle (125 %, 150 %), l'image capturée n'est pas
+# dans le même repère que la souris et tous les clics dérivés tombent à côté.
+ensure_dpi_aware()
 
 
 def screenshot(
@@ -18,8 +24,14 @@ def screenshot(
     monitor: int = 0,
     region: dict | None = None,
     return_base64: bool = False,
+    max_width: int | None = None,
 ) -> dict:
-    """Capture d'écran. region = {x, y, width, height} (optionnel)."""
+    """Capture d'écran. region = {x, y, width, height} (optionnel).
+
+    max_width : si fourni et que la capture est plus large, l'image est réduite.
+    Le résultat contient alors 'scale' et 'coordinate_hint' : les coordonnées à
+    passer aux tools souris sont celles du BUREAU, pas celles de l'image réduite.
+    """
     try:
         import mss
         import mss.tools
@@ -51,15 +63,41 @@ def screenshot(
                 idx = int(monitor) if monitor and monitor < len(sct.monitors) else 0
                 bbox = sct.monitors[idx]
             shot = sct.grab(bbox)
-            mss.tools.to_png(shot.rgb, shot.size, output=path)
+            full_w, full_h = shot.size
+            scale = 1.0
+            if max_width and full_w > int(max_width):
+                from PIL import Image
+                scale = int(max_width) / full_w
+                img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
+                img = img.resize((int(max_width), max(1, int(full_h * scale))),
+                                 Image.LANCZOS)
+                img.save(path, format="PNG", optimize=True)
+                out_w, out_h = img.size
+            else:
+                mss.tools.to_png(shot.rgb, shot.size, output=path)
+                out_w, out_h = full_w, full_h
     except Exception as exc:
         return {"success": False, "error": f"{type(exc).__name__}: {exc}"}
 
+    origin_x, origin_y = bbox["left"], bbox["top"]
     result = {
         "success": True,
         "path": path,
-        "size": {"width": shot.size[0], "height": shot.size[1]},
+        "size": {"width": out_w, "height": out_h},
+        "captured_size": {"width": full_w, "height": full_h},
+        "origin": {"x": origin_x, "y": origin_y},
+        "scale": round(scale, 4),
     }
+    if scale != 1.0:
+        result["coordinate_hint"] = (
+            f"Image réduite. Pour cliquer : x_bureau = {origin_x} + x_image/{scale:.4f}, "
+            f"y_bureau = {origin_y} + y_image/{scale:.4f}."
+        )
+    elif origin_x or origin_y:
+        result["coordinate_hint"] = (
+            f"Origine de la capture au point bureau ({origin_x},{origin_y}) : "
+            f"ajouter cet offset aux coordonnées lues sur l'image."
+        )
     if return_base64:
         import base64
         with open(path, "rb") as f:

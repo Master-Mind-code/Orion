@@ -1,0 +1,52 @@
+{
+  "_comment": [
+    "Serveurs MCP externes consommés par Orion. Copier en mcp_servers.json et",
+    "adapter les chemins. Nécessite ORION_MCP_ENABLED=true dans .env.",
+    "",
+    "include / exclude : motifs glob sur le nom du tool côté serveur. Sans",
+    "include, tout est exposé — déconseillé, chaque schéma coûte des tokens à",
+    "CHAQUE appel au LLM.",
+    "",
+    "requires_execution_switch : ces tools restent bloqués tant que",
+    "ORION_TRADING_EXECUTION_ENABLED n'est pas à true, en plus de la",
+    "confirmation par mot de passe. Ils engagent de l'argent réel."
+  ],
+  "servers": [
+    {
+      "alias": "mt5",
+      "enabled": true,
+      "command": "C:/Users/ebahn/AppData/Local/Programs/Python/Python311/python.exe",
+      "args": ["C:/Users/ebahn/Desktop/Claude-Trade/mt5_mcp_server.py"],
+      "timeout": 30,
+      "description_prefix": "[MetaTrader 5 — COMPTE RÉEL. Les symboles de ce courtier portent un suffixe (ex: XAUUSDc, EURUSDc) : passer par symbols_search avant tout autre appel.]",
+      "include": [
+        "account_info", "positions_get", "orders_get", "symbol_info",
+        "symbols_search", "quote", "rates",
+        "order_send", "position_close", "position_modify"
+      ],
+      "requires_execution_switch": [
+        "order_send", "position_close", "position_modify"
+      ]
+    },
+    {
+      "alias": "tv",
+      "enabled": true,
+      "command": "node",
+      "args": ["C:/Users/ebahn/tradingview-mcp-jackson/src/server.js"],
+      "timeout": 45,
+      "description_prefix": "[TradingView]",
+      "include": [
+        "quote_get", "symbol_info", "symbol_search",
+        "data_get_ohlcv", "data_get_study_values",
+        "data_get_pine_lines", "data_get_pine_labels",
+        "data_get_pine_tables", "data_get_pine_boxes",
+        "chart_get_state", "chart_set_symbol", "chart_set_timeframe",
+        "chart_manage_indicator", "indicator_set_inputs",
+        "watchlist_get", "watchlist_add",
+        "alert_create", "alert_list", "alert_delete",
+        "capture_screenshot", "depth_get", "tv_health_check", "tv_launch"
+      ],
+      "exclude": ["pine_get_source", "ui_*", "tab_*", "replay_*", "weave_*"]
+    }
+  ]
+}

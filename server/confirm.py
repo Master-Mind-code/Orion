@@ -47,8 +47,12 @@ DEFAULT_DANGEROUS: dict[str, str] = {
     "run_python_script": "exécution d'un script Python",
     # Contrôle souris/clavier
     "mouse_click":       "click de souris automatisé",
+    "mouse_drag":        "glisser-déposer automatisé",
     "keyboard_type":     "frappe clavier automatisée",
     "keyboard_press":    "appui sur une combinaison de touches",
+    "keyboard_key":      "appui sur une combinaison de touches",
+    # Contrôle des fenêtres : 'close' peut faire perdre du travail non enregistré
+    "window_control":    "action sur une fenêtre (fermeture, déplacement...)",
     # Mémoire long terme : effacement
     "memory_clear":      "effacement complet de la mémoire long terme",
     "memory_forget":     "suppression d'un souvenir",
@@ -62,18 +66,38 @@ DEFAULT_DANGEROUS: dict[str, str] = {
 }
 
 
+def _mcp_dangerous() -> dict[str, str]:
+    """Tools MCP marqués 'exécution' (ordres de marché) découverts au runtime.
+
+    Import local : le pont MCP n'est pas toujours chargé, et on ne veut pas
+    qu'un problème de ce côté empêche la confirmation de fonctionner.
+    """
+    try:
+        from server.mcp_bridge import MCP_DANGEROUS
+        return dict(MCP_DANGEROUS)
+    except Exception:
+        return {}
+
+
 def _load_dangerous_set() -> dict[str, str]:
     """Permet d'override la liste via ORION_CONFIRM_TOOLS (CSV)."""
     override = (get_env("CONFIRM_TOOLS") or "").strip()
     if not override:
-        return DEFAULT_DANGEROUS.copy()
+        merged = DEFAULT_DANGEROUS.copy()
+        # Un ordre de marché passe TOUJOURS par la confirmation, même si
+        # l'utilisateur a réduit la liste : on ne les retire pas plus bas.
+        merged.update(_mcp_dangerous())
+        return merged
+    # Les ordres de marché ne sont jamais retirables par l'override : ils
+    # engagent de l'argent réel et sont irréversibles.
     if override.lower() in ("none", "false", "off", "0"):
-        return {}
+        return _mcp_dangerous()
     out: dict[str, str] = {}
     for tok in override.split(","):
         name = tok.strip()
         if name:
             out[name] = DEFAULT_DANGEROUS.get(name, "action sensible")
+    out.update(_mcp_dangerous())
     return out
 
 

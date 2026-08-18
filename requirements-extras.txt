@@ -8,6 +8,8 @@
 #   read_pdf        → pypdf
 #   read_docx       → python-docx
 #   mouse_*, keyboard_* → pyautogui
+#   clipboard_get/set   → pyperclip
+#   list_windows, focus_window, window_control → pygetwindow
 #
 # Note Windows : pyautogui demande pillow, déjà inclus via mss.
 winotify>=1.1.0; sys_platform == "win32"
@@ -16,3 +18,5 @@ pillow>=10.0.0
 pypdf>=4.0.0
 python-docx>=1.0.0
 pyautogui>=0.9.54
+pyperclip>=1.8.2
+pygetwindow>=0.0.9

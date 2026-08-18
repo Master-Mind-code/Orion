@@ -17,6 +17,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 sync_env_aliases()
 
 from server.tools import ALL_HANDLERS
+from server import mcp_bridge
 from server.providers import get_provider, ProviderResponse
 from server import confirm
 from server import audit
@@ -293,6 +294,12 @@ TOOLS = [
                     "description": "Région à capturer (optionnel)",
                 },
                 "return_base64": {"type": "boolean", "description": "Inclure l'image en base64 dans la réponse", "default": False},
+                "max_width": {
+                    "type": "integer",
+                    "description": "Réduit l'image au-delà de cette largeur. La réponse contient alors "
+                                   "'scale' et 'coordinate_hint' : les coordonnées à passer aux tools "
+                                   "souris restent celles du BUREAU, pas celles de l'image réduite.",
+                },
             },
         },
     },
@@ -388,6 +395,116 @@ TOOLS = [
                 },
             },
             "required": ["keys"],
+        },
+    },
+    {
+        "name": "keyboard_key",
+        "description": "Combinaison de touches sous forme de texte, plus pratique que keyboard_press. "
+                       "Ex : 'enter', 'ctrl+c', 'ctrl+shift+n', 'alt+tab', 'win+d'. "
+                       "Plusieurs appuis successifs séparés par des espaces : 'ctrl+a ctrl+c'. "
+                       "Nécessite ORION_AUTOMATION_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "keys": {"type": "string", "description": "'ctrl+c' ou 'ctrl+a ctrl+c'"},
+            },
+            "required": ["keys"],
+        },
+    },
+    {
+        "name": "automation_status",
+        "description": "État de l'interrupteur d'automation, géométrie des écrans (bureau virtuel "
+                       "et moniteurs) et position de la souris. À appeler AVANT toute séquence de "
+                       "contrôle du bureau pour connaître les bornes de coordonnées valides.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "mouse_drag",
+        "description": "Glisser-déposer de (from_x, from_y) vers (to_x, to_y) : sélection, "
+                       "déplacement d'icône, redimensionnement. Nécessite ORION_AUTOMATION_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "from_x": {"type": "integer"},
+                "from_y": {"type": "integer"},
+                "to_x": {"type": "integer"},
+                "to_y": {"type": "integer"},
+                "duration": {"type": "number", "description": "Durée du glissement en secondes", "default": 0.6},
+                "button": {"type": "string", "description": "left | right | middle", "default": "left"},
+            },
+            "required": ["from_x", "from_y", "to_x", "to_y"],
+        },
+    },
+    {
+        "name": "mouse_scroll",
+        "description": "Molette à la position donnée (ou position actuelle si x/y omis). "
+                       "amount = nombre de crans, 3 crans ≈ un tiers d'écran. "
+                       "Nécessite ORION_AUTOMATION_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "amount": {"type": "integer", "default": 5},
+                "direction": {"type": "string", "description": "up | down | left | right", "default": "down"},
+            },
+        },
+    },
+    # ─── Presse-papier ────────────────────────────────────────
+    {
+        "name": "clipboard_get",
+        "description": "Lit le contenu texte du presse-papier (lecture, toujours autorisée).",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "clipboard_set",
+        "description": "Place du texte dans le presse-papier. Combiné à keyboard_key('ctrl+v'), "
+                       "c'est la façon fiable de saisir des accents ou un texte long — bien plus "
+                       "sûr que keyboard_type. Nécessite ORION_AUTOMATION_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+    },
+    # ─── Fenêtres du bureau ───────────────────────────────────
+    {
+        "name": "list_windows",
+        "description": "Liste les fenêtres ouvertes avec titre, position, taille et état "
+                       "(minimized/maximized/active). Lecture seule, toujours autorisée. "
+                       "Une fenêtre réduite est rapportée en 237x39 @ (-32000,-32000) : c'est la "
+                       "convention Windows, passer par focus_window pour agir dessus.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "focus_window",
+        "description": "Met au premier plan la première fenêtre dont le titre contient le texte "
+                       "donné (restaure si elle est réduite). Nécessite ORION_AUTOMATION_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title_contains": {"type": "string", "description": "Fragment du titre, insensible à la casse"},
+            },
+            "required": ["title_contains"],
+        },
+    },
+    {
+        "name": "window_control",
+        "description": "Agit sur une fenêtre : minimize, maximize, restore, close, move (x,y), "
+                       "resize (width,height). 'close' peut faire perdre du travail non enregistré. "
+                       "Nécessite ORION_AUTOMATION_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title_contains": {"type": "string"},
+                "action": {"type": "string",
+                           "description": "minimize | maximize | restore | close | move | resize"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "width": {"type": "integer"},
+                "height": {"type": "integer"},
+            },
+            "required": ["title_contains", "action"],
         },
     },
     # ─── Génération d'images ──────────────────────────────────
@@ -699,6 +816,15 @@ TOOLS = [
             "required": ["path"],
         },
     },
+    # ─── Pont MCP ─────────────────────────────────────────────
+    {
+        "name": "mcp_status",
+        "description": "Diagnostic du pont MCP : serveurs externes connectés (TradingView, "
+                       "MetaTrader 5...), tools exposés, erreurs de démarrage, et état des deux "
+                       "interrupteurs (pont / exécution d'ordres). À appeler quand un tool mt5_* "
+                       "ou tv_* échoue, pour savoir si le serveur est vivant.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
 ]
 
 # Tools qui interagissent avec le matériel/OS et acceptent un target_device.
@@ -711,6 +837,9 @@ _DEVICE_BOUND_TOOLS = {
     # Nouveaux device-bound
     "notify", "screenshot", "list_monitors", "read_pdf", "read_docx",
     "mouse_position", "mouse_move", "mouse_click", "keyboard_type", "keyboard_press",
+    "automation_status", "mouse_drag", "mouse_scroll", "keyboard_key",
+    "clipboard_get", "clipboard_set",
+    "list_windows", "focus_window", "window_control",
     # Tools Termux : ne s'exécutent QUE sur worker Android
     "termux_battery", "termux_location", "termux_send_sms", "termux_list_sms",
     "termux_contacts", "termux_call", "termux_vibrate", "termux_notification",
@@ -726,6 +855,32 @@ for _tool in TOOLS:
                            "pour exécuter sur le serveur. Utilise list_connected_devices d'abord.",
         }
 
+
+# ─────────────────────────────────────────────────────────────────
+# Tools MCP externes (TradingView, MetaTrader 5, ...)
+# ─────────────────────────────────────────────────────────────────
+# Les schémas ne sont pas connus à l'import : il faut interroger chaque serveur.
+# On charge donc à la première utilisation, jamais à l'import — sinon le simple
+# fait d'importer l'orchestrateur (tests, CLI, worker) lancerait des process.
+
+def get_tools() -> list[dict]:
+    """Schémas natifs + schémas découverts sur les serveurs MCP déclarés."""
+    try:
+        mcp_bridge.load()  # idempotent, no-op si ORION_MCP_ENABLED != true
+    except Exception:
+        return TOOLS
+    if not mcp_bridge.MCP_TOOLS:
+        return TOOLS
+    return TOOLS + mcp_bridge.MCP_TOOLS
+
+
+def _resolve_handler(tool_name: str):
+    handler = ALL_HANDLERS.get(tool_name)
+    if handler is not None:
+        return handler
+    return mcp_bridge.MCP_HANDLERS.get(tool_name)
+
+
 # ─────────────────────────────────────────────────────────────────
 # Prompt système d'Orion
 # ─────────────────────────────────────────────────────────────────
@@ -739,6 +894,71 @@ Tes capacités :
 - Exécuter des commandes shell et scripts Python
 - Rechercher sur le web et lire des pages web
 - Ouvrir des applications et logiciels
+- Piloter le bureau : voir l'écran, déplacer et cliquer la souris, taper au
+  clavier, gérer les fenêtres, lire et écrire le presse-papier
+
+═══ PILOTAGE DU BUREAU ═══
+Ces tools agissent physiquement sur la machine. Méthode :
+
+1. automation_status EN PREMIER. Il dit si l'interrupteur est ouvert et donne la
+   géométrie des écrans. Si l'automation est désactivée, dis-le à l'utilisateur
+   au lieu d'enchaîner des appels qui échoueront tous.
+2. Regarde avant d'agir : screenshot ou list_windows. Ne clique jamais sur des
+   coordonnées devinées ou mémorisées d'un écran précédent — l'interface a pu
+   bouger entre deux actions.
+3. Les coordonnées sont celles du BUREAU VIRTUEL. Si tu as demandé un screenshot
+   avec max_width, l'image est réduite : applique la conversion donnée par
+   'coordinate_hint' avant de cliquer. Ne clique pas aux coordonnées lues
+   directement sur une image réduite.
+4. Pour viser précisément : une capture large pour repérer la zone, puis
+   screenshot avec 'region' autour de la cible (une région sous max_width n'est
+   pas réduite, échelle 1.0).
+5. Pour saisir du texte avec accents ou un texte long : clipboard_set puis
+   keyboard_key('ctrl+v'). keyboard_type passe par les scancodes d'un clavier US
+   et déforme les accents.
+6. Après une action qui change l'écran (clic sur un bouton, ouverture d'une
+   fenêtre), reprends une capture avant l'action suivante.
+7. Vérifie le résultat plutôt que de le supposer, et rapporte ce que tu as
+   réellement observé.
+
+Prudence : window_control avec 'close' peut faire perdre du travail non
+enregistré — demande avant. Ne tape jamais de mot de passe, de numéro de carte
+ou de code d'authentification au clavier, même si on te les donne : dis à
+l'utilisateur de les saisir lui-même.
+
+═══ MARCHÉS ET TRADING ═══
+Les tools mt5_* (MetaTrader 5, COMPTE RÉEL) et tv_* (TradingView) sont branchés
+via le pont MCP. Ils touchent de l'argent réel : discipline obligatoire.
+
+Avant d'analyser :
+- Si un tool mt5_* ou tv_* échoue, appelle mcp_status pour savoir si le serveur
+  est vivant avant de conclure quoi que ce soit.
+- Les symboles du courtier portent un suffixe (XAUUSDc, EURUSDc...). Utilise
+  toujours mt5_symbols_search pour trouver le nom exact — ne devine jamais.
+- TradingView exige que son application de bureau tourne avec CDP activé. Si les
+  tools tv_* renvoient "CDP connection failed", n'en conclus pas que TradingView
+  est absent : demande à l'utilisateur de lancer son raccourci
+  "Lancer TradingView (CDP)". Le tool tv_tv_launch ne trouve pas l'exécutable sur
+  cette machine, inutile d'insister avec.
+- Ne cite jamais un prix de mémoire ou par estimation : lis-le avec mt5_quote ou
+  tv_quote_get. Un chiffre inventé sur un marché est une faute grave.
+
+Avant d'exécuter un ordre :
+- N'ouvre, ne modifie et ne ferme JAMAIS une position de ta propre initiative.
+  Il faut une instruction explicite de l'utilisateur, avec au minimum le
+  symbole, le sens, le volume et le stop loss.
+- Fais d'abord tourner mt5_order_send SANS confirm (aperçu / dry run), montre
+  l'aperçu à l'utilisateur — prix, volume, SL, TP, risque en devise du compte —
+  et attends son accord avant de relancer avec confirm.
+- Refuse un ordre sans stop loss. Dis-le clairement et propose un niveau.
+- Vérifie la taille de position par rapport à mt5_account_info : si le risque
+  dépasse manifestement ce que le compte supporte, signale-le avant d'agir.
+- Après exécution, relis mt5_positions_get et rapporte l'état réel obtenu, pas
+  l'état espéré.
+
+Tu n'es pas conseiller financier agréé. Tu peux décrire ce que montrent les
+données, les structures et les niveaux ; dis clairement que la décision et le
+risque appartiennent à l'utilisateur, sans te transformer en donneur d'ordres.
 
 Principes :
 - Sois proactif : si tu dois créer un fichier Python, crée-le ET exécute-le si c'est logique
@@ -883,7 +1103,7 @@ def execute_tool(tool_name: str, tool_input: dict, dispatcher=None,
             result_str = json.dumps({"success": False, "error": f"Dispatch vers '{target}' a échoué : {e}"})
     else:
         # Exécution locale
-        handler = ALL_HANDLERS.get(tool_name)
+        handler = _resolve_handler(tool_name)
         if not handler:
             result_str = json.dumps({"success": False, "error": f"Tool inconnu : {tool_name}"})
         else:
@@ -949,7 +1169,7 @@ def process_request(
     for _ in range(MAX_ITERATIONS):
         response = provider.call(
             system=system_prompt,
-            tools=TOOLS,
+            tools=get_tools(),
             messages=conversation_history,
             max_tokens=4096,
         )
@@ -1019,7 +1239,7 @@ def process_request_streaming(
         response: ProviderResponse | None = None
         for chunk in provider.stream(
             system=system_prompt,
-            tools=TOOLS,
+            tools=get_tools(),
             messages=conversation_history,
             max_tokens=4096,
         ):

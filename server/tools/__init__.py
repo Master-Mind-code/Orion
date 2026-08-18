@@ -11,10 +11,12 @@ from .notifications import HANDLERS as _NOTIF_HANDLERS
 from .screenshot import HANDLERS as _SCREEN_HANDLERS
 from .documents import HANDLERS as _DOC_HANDLERS
 from .automation import HANDLERS as _AUTO_HANDLERS
+from .windows_ctrl import HANDLERS as _WINCTRL_HANDLERS
 from .termux_mobile import HANDLERS as _TERMUX_HANDLERS
 from .vision import HANDLERS as _VISION_HANDLERS
 from .audit_query import HANDLERS as _AUDIT_HANDLERS
 from server.safety_backup import HANDLERS as _BACKUP_HANDLERS
+from server.mcp_bridge import HANDLERS as _MCP_HANDLERS
 
 # Tools optionnels (dépendances lourdes ou configurables) : import tolérant
 def _optional(module_name: str) -> dict:
@@ -42,10 +44,12 @@ ALL_HANDLERS = {
     **_SCREEN_HANDLERS,
     **_DOC_HANDLERS,
     **_AUTO_HANDLERS,
+    **_WINCTRL_HANDLERS,
     **_TERMUX_HANDLERS,
     **_VISION_HANDLERS,
     **_AUDIT_HANDLERS,
     **_BACKUP_HANDLERS,
+    **_MCP_HANDLERS,
     **_GOOGLE_HANDLERS,
     **_IMAGE_HANDLERS,
     **_MEMORY_HANDLERS,
