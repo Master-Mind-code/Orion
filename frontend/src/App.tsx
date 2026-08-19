@@ -3,31 +3,43 @@ import { VoiceUI } from "./pages/VoiceUI";
 import { OrionUI } from "./pages/OrionUI";
 import { TradingUI } from "./pages/TradingUI";
 import { CockpitUI } from "./pages/CockpitUI";
+import { CapsuleUI } from "./pages/CapsuleUI";
 
-type Route = "orion" | "voice" | "trading" | "cockpit";
+type Route = "orion" | "voice" | "trading" | "cockpit" | "capsule";
 
-function pickRoute(pathname: string): Route {
-  if (pathname.startsWith("/voice")) return "voice";
-  if (pathname.startsWith("/trading")) return "trading";
-  if (pathname.startsWith("/cockpit")) return "cockpit";
+/**
+ * En production la coque Electron charge un fichier local et passe la route
+ * dans le hash : `index.html#/cockpit`. Le chemin vaut alors toujours
+ * `/index.html`, d'où la lecture du hash en priorité.
+ */
+function routeCourante(): Route {
+  if (typeof window === "undefined") return "orion";
+  const brut = window.location.hash.replace(/^#/, "") || window.location.pathname;
+  if (brut.startsWith("/voice")) return "voice";
+  if (brut.startsWith("/trading")) return "trading";
+  if (brut.startsWith("/cockpit")) return "cockpit";
+  if (brut.startsWith("/capsule")) return "capsule";
   return "orion";
 }
 
 export default function App() {
-  const [route, setRoute] = useState<Route>(() =>
-    typeof window === "undefined" ? "orion" : pickRoute(window.location.pathname),
-  );
+  const [route, setRoute] = useState<Route>(routeCourante);
 
   useEffect(() => {
-    const onPop = () => setRoute(pickRoute(window.location.pathname));
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    const relire = () => setRoute(routeCourante());
+    window.addEventListener("popstate", relire);
+    window.addEventListener("hashchange", relire);
+    return () => {
+      window.removeEventListener("popstate", relire);
+      window.removeEventListener("hashchange", relire);
+    };
   }, []);
 
   switch (route) {
     case "voice":   return <VoiceUI />;
     case "trading": return <TradingUI />;
     case "cockpit": return <CockpitUI />;
+    case "capsule": return <CapsuleUI />;
     default:        return <OrionUI />;
   }
 }

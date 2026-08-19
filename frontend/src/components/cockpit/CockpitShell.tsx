@@ -12,8 +12,10 @@
  * c'est ce qui donne la sensation de profondeur des références.
  */
 import type { ReactNode } from "react";
+import { Minus, Pin, Square, X } from "lucide-react";
 
 import { CK, SKIN, type CockpitState } from "@/lib/cockpit-theme";
+import { agirFenetre, basculerCapsule, estBureau } from "@/lib/desktop";
 import { CockpitFrame } from "./CockpitFrame";
 import { ReactorCore } from "./ReactorCore";
 import { RadialMenu, type RadialItem } from "./RadialMenu";
@@ -31,6 +33,32 @@ interface ShellProps {
   /** Réduit le réacteur pour laisser la place à un contenu dense. */
   coreScale?: number;
   children?: ReactNode;
+}
+
+/** Commandes de fenêtre : la coque Electron est sans bordure, il n'y a donc
+ *  aucun bouton système. Absentes dans un navigateur, où elles n'ont pas de sens. */
+function WindowControls() {
+  if (!estBureau()) return null;
+  const btn = "rounded p-1.5 text-text-dim transition hover:bg-white/10 hover:text-text";
+  return (
+    <div className="flex items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+      <button className={btn} title="Capsule flottante" onClick={() => basculerCapsule()}>
+        <Pin size={13} strokeWidth={1.8} />
+      </button>
+      <button className={btn} title="Réduire" onClick={() => agirFenetre("reduire")}>
+        <Minus size={13} strokeWidth={1.8} />
+      </button>
+      <button className={btn} title="Agrandir" onClick={() => agirFenetre("agrandir")}>
+        <Square size={11} strokeWidth={1.8} />
+      </button>
+      <button
+        className="rounded p-1.5 text-text-dim transition hover:bg-red/80 hover:text-white"
+        title="Fermer" onClick={() => agirFenetre("fermer")}
+      >
+        <X size={13} strokeWidth={1.8} />
+      </button>
+    </div>
+  );
 }
 
 export function CockpitShell({
@@ -99,8 +127,19 @@ export function CockpitShell({
         <div className="pointer-events-auto flex items-center gap-4 text-right">
           {status}
           {meta}
+          <WindowControls />
         </div>
       </header>
+
+      {/* Zone de glissement de la fenêtre sans bordure. Purement Electron :
+          dans un navigateur, -webkit-app-region est ignoré. Elle s'arrête avant
+          les boutons, sinon ils deviennent inertes. */}
+      {estBureau() && (
+        <div
+          className="absolute left-0 right-64 top-0 z-20 h-14"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        />
+      )}
 
       {/* ── Contenu du mode ── */}
       {/* Le contenu se place lui-même : le cœur doit rester dégagé, ce qu'un

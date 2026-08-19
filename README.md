@@ -1,270 +1,206 @@
-# 🤖 Orion — Assistant IA Personnel
+# Orion — assistant IA personnel
 
-Un assistant IA autonome multi-appareils, inspiré d'un assistant façon Iron Man.
-Cerveau interchangeable : **Anthropic Claude** ou **Google Gemini** · Outils : fichiers, shell, Python, web, apps.
-Interface : CLI ou UI navigateur (avec voix d'entrée/sortie + animation morphing).
+Assistant autonome multi-appareils : cerveau LLM interchangeable, outils système,
+pilotage du bureau, pont vers des serveurs MCP externes (TradingView, MetaTrader 5),
+et une interface cockpit 3D disponible en application de bureau.
 
 ---
 
-## 🚀 Installation rapide
+## Installation
 
-### 1. Récupérer le projet
-
-```bash
-cd ~
-# Si git installé :
-git clone <ton-repo> orion
-# Sinon, copie le dossier orion/
-cd orion
-```
-
-### 2. Installer les dépendances
+### 1. Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configurer les variables d'environnement
+Dépendances optionnelles, à installer selon ce que tu veux activer :
+
+| Fichier | Débloque |
+|---|---|
+| `requirements-extras.txt` | pilotage du bureau, captures, notifications, PDF/DOCX |
+| `requirements-voice.txt` | voix locale (Whisper + Kokoro + VAD) |
+| `requirements-google.txt` | Gmail + Google Calendar |
+| `requirements-rag.txt` | mémoire long terme vectorielle |
+| `requirements-worker.txt` | mode worker sur un appareil distant |
+
+### 2. Configuration
 
 ```bash
 cp .env.example .env
-# Édite .env avec ton éditeur préféré
 ```
 
-Choisis ton provider et remplis les clés correspondantes :
+Renseigne au minimum `ANTHROPIC_API_KEY` (ou `GEMINI_API_KEY`) et
+`ORION_SECRET_TOKEN`. Les presets font le reste :
 
 ```bash
-# Provider à utiliser : "anthropic" (par défaut) ou "gemini"
-ORION_PROVIDER=anthropic
-
-# Pour Anthropic (https://console.anthropic.com)
-ANTHROPIC_API_KEY=sk-ant-...
-
-# OU pour Gemini gratuit (https://aistudio.google.com/apikey)
-GEMINI_API_KEY=...
-
-ORION_SECRET_TOKEN=un_mot_de_passe_fort_pour_le_serveur
+python start.py init                    # liste les presets
+python start.py init --preset trading   # trading, voice, worker, google, minimal
 ```
 
-### 4. Lancer Orion
+### 3. Interface
 
 ```bash
-# Lanceur interactif (recommandé)
-python start.py
-
-# Ou direct :
-python start.py server      # serveur + ouverture de l'UI navigateur
-python start.py server --no-ui
-python start.py cli         # CLI standalone (sans serveur)
-python start.py worker      # mode worker (sur un appareil distant)
-```
-
-Sous Windows : double-clic sur `start.bat`. Sous Linux/macOS/Termux : `./start.sh`.
-
-Pour lancer Orion automatiquement à chaque ouverture de session Windows :
-
-```powershell
-python start.py install-startup
-```
-
-Cela démarre le mode `server` en arrière-plan, sans ouvrir automatiquement le navigateur.
-Pour le retirer :
-
-```powershell
-python start.py remove-startup
+npm --prefix frontend install
+npm --prefix desktop install     # seulement pour l'application de bureau
 ```
 
 ---
 
-## 🧠 Choisir son provider LLM
+## Lancement
 
-Orion fonctionne avec deux fournisseurs interchangeables :
+| Commande | Effet |
+|---|---|
+| `python start.py server` | serveur central + UI navigateur |
+| `python start.py cli` | CLI autonome, sans serveur |
+| `python start.py voice` | service voix locale (« hey orion ») |
+| `python start.py worker` | exécute les outils sur un appareil distant |
+| `python start.py controller` | CLI distante vers un serveur existant |
+| `python start.py ui` | ouvre seulement l'UI navigateur |
+| `python start.py install-startup` | démarrage automatique Windows |
+| `python start.py remove-startup` | le désactive |
 
-| Provider             | Modèle par défaut    | Coût                            | Quotas                          | Tool use     |
-| -------------------- | -------------------- | ------------------------------- | ------------------------------- | ------------ |
-| **Anthropic Claude** | `claude-sonnet-4-6`  | Payant (~3$/M tokens entrée)    | Selon plan                      | ⭐ Excellent |
-| **Google Gemini**    | `gemini-2.0-flash`   | **Gratuit**                     | ~15 req/min, 1M tokens/jour     | ✅ Bon       |
-
-Pour basculer : modifie `ORION_PROVIDER` dans `.env`. Aucun autre changement requis.
-
-Pour changer de modèle dans le même provider :
-
-- Anthropic : `ORION_ANTHROPIC_MODEL=claude-haiku-4-5-20251001`
-- Gemini : `ORION_GEMINI_MODEL=gemini-2.0-flash-exp` (ou `gemini-1.5-pro`, etc.)
-
----
-
-## 🖥️ Interface UI navigateur
-
-Ouvre `orion_ui.html` dans ton navigateur (ou laisse `start.py server` le faire).
-
-Fonctionnalités :
-
-- **Mot de passe au lancement** : "Press on" (à la voix ou au clavier)
-- **Animation morphing** : la sphère se transforme automatiquement en étoile, puis en lettres "DOMINIQUE", puis revient (toutes les 7s)
-- **Reconnaissance vocale** (🎤 micro) : parle directement à Orion en français
-- **Synthèse vocale** : Orion te répond à la voix (voix masculine grave si disponible)
-- **États visuels** : la sphère change de couleur selon l'état (bleu = idle, rouge = écoute, doré = traitement, vert = parle)
-
-Compatible Chrome, Edge et Safari (Firefox n'a pas la Web Speech API).
-
----
-
-## 📱 Mode multi-appareils RÉEL
-
-Contrairement à un simple proxy de chat, Orion peut **exécuter des tools sur n'importe quel appareil connecté**.
-
-### Architecture
-
-```text
-┌─────────────┐                ┌──────────────────────┐                ┌──────────────┐
-│  UI / chat  │ ─────WS──────→ │  Serveur central     │ ─── RPC ────→  │  Worker PC   │
-│ (browser)   │ ←──── reply ── │  (Claude / Gemini)   │ ←── result ──  │              │
-└─────────────┘                └──────────────────────┘                └──────────────┘
-                                          ↑                                    ↓
-                                          │  RPC ← result               Worker Téléphone
-                                          │       (Termux)
-                                          ↓
-                                   Worker maison-pi (Raspberry…)
-```
-
-### Sur l'appareil principal (serveur)
+### Application de bureau
 
 ```bash
-python start.py server
+npm --prefix frontend run dev     # terminal 1
+npm --prefix desktop run dev      # terminal 2
 ```
 
-### Sur chaque autre appareil (PC secondaire, téléphone Termux…)
+Orion s'ouvre en fenêtre native sans bordure, plus une **capsule flottante**
+toujours au-dessus dans un coin de l'écran. **Ctrl+Alt+O** rappelle ou masque le
+cockpit sans quitter ce que tu fais ; un clic sur la capsule fait la même chose.
+
+Pour empaqueter un installeur Windows :
 
 ```bash
-export ORION_SERVER_URL="ws://IP_DU_SERVEUR:8765"
-export ORION_SECRET_TOKEN="le_token_du_serveur"
-export ORION_DEVICE_ID="telephone-dominique"
-python start.py worker
-```
-
-L'appareil s'enregistre automatiquement avec son OS, hostname et liste de tools.
-
-### Cibler un appareil depuis le chat
-
-```text
-"Liste les appareils connectés"
-→ Claude/Gemini appelle list_connected_devices
-
-"Ouvre Firefox sur telephone-dominique"
-→ open_app(app_name="firefox", target_device="telephone-dominique")
-→ s'exécute physiquement sur le téléphone
-```
-
-Tools cibles supportés (`target_device`) : `create_file`, `read_file`, `list_directory`, `delete_file`, `create_directory`, `move_file`, `run_shell_command`, `run_python_script`, `get_system_info`, `open_app`, `open_url_in_browser`, `list_running_processes`.
-
-⚠️ **Limite actuelle** : montre connectée et TV ne sont pas supportées en l'état (pas de runtime Python). Pour intégrer une TV, utilise un Raspberry Pi à proximité comme worker.
-
----
-
-## 💬 Exemples de commandes
-
-```text
-"Crée un fichier Python qui calcule les fibonacci et exécute-le"
-"Recherche sur le web les dernières news sur Claude AI"
-"Liste mon dossier home et crée un résumé"
-"Ouvre Firefox sur youtube.com"
-"Crée un script bash de backup et sauvegarde-le dans ~/scripts/"
-"Quel est l'état de mes processus en cours ?"
-"Lis mon fichier config.json et explique-moi ce qu'il fait"
-"Liste les appareils connectés puis ouvre Spotify sur le téléphone"
+npm --prefix frontend run build
+npm --prefix desktop run build
 ```
 
 ---
 
-## 🗂 Structure du projet
+## Le cockpit
 
-```text
-orion/
-├── server/
-│   ├── __init__.py
-│   ├── main.py              # Serveur FastAPI WebSocket (controllers + workers)
-│   ├── orchestrator.py      # Boucle agentic + dispatcher des tools
-│   ├── providers/
-│   │   ├── __init__.py      # get_provider() — sélection par ORION_PROVIDER
-│   │   ├── base.py          # Interface Provider (format pivot Anthropic)
-│   │   ├── anthropic_provider.py
-│   │   └── gemini_provider.py
-│   └── tools/
-│       ├── __init__.py      # ALL_HANDLERS agrégé
-│       ├── file_manager.py
-│       ├── code_runner.py
-│       ├── web_search.py
-│       └── app_launcher.py
-├── agent/
-│   ├── __init__.py
-│   └── agent.py             # Client multi-mode : worker (RPC) ou controller (chat)
-├── interface/
-│   ├── __init__.py
-│   └── cli.py               # CLI standalone (rich + prompt_toolkit)
-├── orion_ui.html            # UI navigateur (sphère 3D, voix, mot de passe)
-├── start.py                 # Lanceur unifié (menu interactif + sous-commandes)
-├── start.bat / start.sh     # Wrappers Windows / Unix
-├── .env.example
-├── requirements.txt
-└── README.md
+Interface 3D commune à tous les modes : réacteur WebGL au centre, satellites
+animés (radar, jauges, spectre, molécules, globe), châssis SVG. Le bloom ne
+s'applique qu'au rendu WebGL — le chrome et le texte restent nets.
+
+| Mode | Contenu |
+|---|---|
+| **Voix** | conversation orale, transcription flottante, micro sous le réacteur |
+| **Trading** | cadran de performance, P&L cumulé, positions, signal IA, journal |
+| **Bureau** | écran en direct, fenêtres avec vignettes et actions, presse-papier |
+| **Système** | à construire (pont MCP, audit, santé des services) |
+
+Le réacteur reflète l'état réel : au repos, en écoute, en traitement, en parole,
+en alerte.
+
+Routes : `/cockpit`, `/capsule`, plus les vues d'origine `/` (chat texte),
+`/voice` et `/trading`, inchangées.
+
+---
+
+## Capacités
+
+**Fichiers et système** — créer, lire, modifier, supprimer, déplacer ; commandes
+shell ; scripts Python ; processus ; informations système.
+
+**Web** — recherche (Brave ou DuckDuckGo), lecture de pages.
+
+**Documents** — PDF, DOCX, vision sur images.
+
+**Bureau** — captures, souris (déplacement, clic, glisser, molette), clavier
+(frappe, combinaisons), fenêtres (lister, activer, réduire, agrandir, déplacer,
+fermer), presse-papier.
+
+**Google Workspace** — Gmail et Calendar via OAuth.
+
+**Mémoire** — mémoire long terme vectorielle (RAG).
+
+**Mobile** — outils Termux sur Android en mode worker.
+
+**Trading** — analyseur Claude branché sur MetaTrader 5 via l'EA `EA/OrionTrader.mq5`,
+dashboard dédié.
+
+**Pont MCP** — Orion consomme n'importe quel serveur MCP externe comme des outils
+natifs. Voir `mcp_servers.example.json` : TradingView (22 outils) et MetaTrader 5
+(10 outils) sont préconfigurés.
+
+---
+
+## Sécurité
+
+Orion peut effacer des fichiers, piloter la souris et passer des ordres de
+marché. Plusieurs verrous, indépendants les uns des autres.
+
+| Verrou | Rôle |
+|---|---|
+| `ORION_SECRET_TOKEN` | authentifie tout accès au serveur |
+| `ORION_CONFIRM_PASSWORD` | mot de passe exigé avant chaque action sensible |
+| `ORION_AUTOMATION_ENABLED` | interrupteur du pilotage physique (souris, clavier, fenêtres) |
+| `ORION_MCP_ENABLED` | interrupteur du pont MCP |
+| `ORION_TRADING_EXECUTION_ENABLED` | **séparé** : autorise les ordres de marché réels |
+| Mode panic | `POST /api/panic` coupe tout instantanément |
+| Rate limit | plafonne les actions sensibles par minute et en rafale |
+| Audit | chaque appel d'outil est tracé dans `data/audit.db` |
+| Backups | copie automatique avant toute suppression ou écrasement |
+
+Trois points méritent d'être compris avant d'ouvrir les interrupteurs.
+
+**Une capture d'écran capture tout ce qui est affiché**, y compris un
+gestionnaire de mots de passe ouvert ou une session bancaire. Ferme ce qui est
+sensible avant d'activer `ORION_AUTOMATION_ENABLED`.
+
+**Le failsafe souris** : amener le curseur dans le coin haut-gauche de l'écran
+interrompt immédiatement l'action d'automation en cours.
+
+**Les ordres de marché** ont leur propre interrupteur, volontairement séparé du
+pont MCP : Orion peut lire le marché en permanence sans qu'un ordre puisse
+partir. Et même avec `ORION_CONFIRM_TOOLS=none`, ils restent soumis au mot de
+passe — cette exception n'est pas désactivable.
+
+### Endpoint d'exécution directe
+
+`POST /api/tool` permet au cockpit d'agir sans passer par le LLM (cliquer
+« réduire » sur une fenêtre ne doit pas coûter un raisonnement). Il applique la
+même chaîne que l'orchestrateur : liste blanche stricte, mode panic, rate limit,
+mot de passe pour les outils sensibles, audit.
+
+---
+
+## Tests
+
+```bash
+python tests/smoke.py                     # suite générale
+python tests/test_desktop_tools.py        # outils bureau, aucune action physique
+python tests/manual/desktop_e2e.py        # bout en bout — PREND LE CONTRÔLE de la machine
+python tests/manual/mcp_bridge_check.py   # pont MCP — démarre les serveurs, n'envoie aucun ordre
 ```
 
----
-
-## 🔒 Sécurité
-
-- **Mot de passe UI** : "Press on" déverrouille le navigateur (côté client uniquement)
-- **Token serveur** : `ORION_SECRET_TOKEN` — toute connexion WebSocket est rejetée sans
-- **Chemins système bloqués** : `/etc/passwd`, `/etc/shadow`, `/boot`, `/sys`, `/proc` (Linux)
-- **Patterns shell dangereux filtrés** : `rm -rf /`, `mkfs`, `dd if=`, fork bomb, etc.
-- ⚠️ La protection `BLOCKED_PATHS` est principalement Unix — sous Windows, restez prudent
-- ⚠️ N'expose **jamais** le serveur sur internet sans Tailscale/HTTPS et un token fort
-- ⚠️ Ne commit jamais `.env` — ajoute-le au `.gitignore`
+Les tests de `tests/manual/` sont à lancer sciemment : le premier pilote
+réellement la souris et le clavier pendant une dizaine de secondes.
 
 ---
 
-## 🌐 Accès depuis l'extérieur (Tailscale)
+## Architecture
 
-Pour accéder à Orion depuis n'importe où sans ouvrir de port :
+```
+server/          serveur FastAPI + WebSocket, orchestrateur, sécurité
+  tools/         outils exposés au LLM
+  mcp_bridge/    client MCP stdio générique
+  trading/       analyseur IA + routes du dashboard
+  memory/        mémoire vectorielle
+agent/           boucle d'agent
+interface/       CLI
+voice/           STT, TTS, VAD, wake word
+frontend/        React + Vite + Tailwind + three.js
+desktop/         coque Electron (cockpit + capsule)
+EA/              Expert Advisor MetaTrader 5
+tests/           suites automatiques et manuelles
+```
 
-1. Installe [Tailscale](https://tailscale.com) sur chaque appareil (gratuit)
-2. Utilise l'IP Tailscale du serveur (`100.x.y.z`) au lieu de l'IP locale
-3. Tunnel WireGuard chiffré bout-en-bout, sans port exposé
-
----
-
-## 🔧 Commandes du lanceur
-
-| Commande                       | Effet                                  |
-| ------------------------------ | -------------------------------------- |
-| `python start.py`              | Menu interactif                        |
-| `python start.py server`       | Lance le serveur + ouvre l'UI          |
-| `python start.py cli`          | CLI standalone (sans serveur)          |
-| `python start.py worker`       | Connecte cet appareil comme worker     |
-| `python start.py controller`   | Chat distant via le serveur            |
-| `python start.py ui`           | Ouvre seulement l'UI navigateur        |
-
----
-
-## ➕ Ajouter un nouveau tool
-
-1. Ajoute une fonction dans `server/tools/ton_tool.py` qui retourne un `dict` `{"success": bool, ...}`
-2. Ajoute-la au mapping `HANDLERS` à la fin du fichier
-3. Importe-la dans `server/tools/__init__.py` et fusionne dans `ALL_HANDLERS`
-4. Définis le schéma JSON dans la liste `TOOLS` de `server/orchestrator.py`
-5. Si le tool interagit avec le matériel, ajoute-le au set `_DEVICE_BOUND_TOOLS` (juste après la liste `TOOLS`) — il acceptera automatiquement un `target_device`
-6. C'est tout — Claude **et** Gemini l'utiliseront automatiquement, en local ou en RPC distant
-
----
-
-## 🎤 Voix : reconnaissance et synthèse
-
-L'UI utilise les **Web Speech API** natives du navigateur :
-
-- **Reconnaissance vocale** (🎤 dans la barre d'input) : parle, ton message est transcrit en texte et envoyé. Lang : `fr-FR`.
-- **Synthèse vocale** : chaque réponse d'Orion est lue à voix haute. La voix masculine française est privilégiée si disponible (Paul, Thomas, Daniel…). Le markdown est nettoyé avant lecture.
-
-Aucun service cloud requis pour la voix — tout passe par le navigateur, hors-ligne.
-
-Pour désactiver la lecture audio : ouvre la console du navigateur et tape `window.speechSynthesis.cancel()` (ou commente l'appel `speak(data.content)` dans `orion_ui.html`).
+Ajouter un outil demande de toucher trois endroits : le module et son `HANDLERS`,
+`ALL_HANDLERS` dans `server/tools/__init__.py`, et le schéma dans `TOOLS` de
+`server/orchestrator.py` — plus `_DEVICE_BOUND_TOOLS` s'il touche au matériel, et
+`DEFAULT_DANGEROUS` de `server/confirm.py` s'il est sensible.

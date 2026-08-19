@@ -146,6 +146,18 @@ def reason_for(tool_name: str) -> str:
     return _DANGEROUS.get(tool_name, "action sensible")
 
 
+def password_matches(candidate: str | None) -> bool:
+    """Compare un mot de passe fourni hors du flux WebSocket (panneau de contrôle).
+
+    Le modal WS passe par resolve() ; l'endpoint /api/tool, lui, reçoit le mot
+    de passe dans la requête et a besoin de cette vérification directe.
+    """
+    attendu = _expected_password()
+    if not attendu:
+        return False
+    return (candidate or "").strip() == attendu
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # Registry des demandes en attente + cache de confirmations
 # ════════════════════════════════════════════════════════════════════════════

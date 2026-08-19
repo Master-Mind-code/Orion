@@ -363,6 +363,72 @@ async def api_panic_release(token: str | None = None):
     return state
 
 
+# ─────────────────────────────────────────────────────────────────
+# Exécution directe d'un tool (panneau de contrôle du cockpit)
+# ─────────────────────────────────────────────────────────────────
+# Le cockpit a besoin d'agir sans passer par le LLM : cliquer « réduire » sur
+# une fenêtre ne doit pas coûter un aller-retour de raisonnement. Cet endpoint
+# court-circuite l'orchestrateur mais PAS la sécurité — liste blanche stricte,
+# mode panic, rate limit, mot de passe pour les tools sensibles, et audit.
+TOOLS_PANNEAU = {
+    # Lecture
+    "automation_status", "list_windows", "list_monitors", "clipboard_get",
+    "screenshot", "mouse_position", "mcp_status",
+    # Action
+    "focus_window", "window_control", "clipboard_set",
+    "mouse_move", "mouse_click", "mouse_drag", "mouse_scroll",
+    "keyboard_type", "keyboard_press", "keyboard_key",
+}
+
+
+@app.post("/api/tool")
+def api_tool(payload: dict, token: str = Depends(verify_token)):
+    """Exécute un tool de la liste blanche, avec la même chaîne de sécurité
+    que l'orchestrateur."""
+    from server.tools import ALL_HANDLERS
+    from server import mcp_bridge
+
+    name = str(payload.get("tool") or "").strip()
+    args = payload.get("args") or {}
+    device = str(payload.get("device_id") or "cockpit")
+
+    if name not in TOOLS_PANNEAU:
+        raise HTTPException(status_code=403,
+                            detail=f"Tool '{name}' non autorisé sur ce point d'entrée.")
+
+    if panic.is_active() and not panic.is_tool_allowed(name):
+        raise HTTPException(status_code=423, detail="Mode panic actif : action bloquée.")
+
+    autorise, motif = rate_limit.check_and_record(device)
+    if not autorise:
+        raise HTTPException(status_code=429, detail=motif)
+
+    if confirm.requires_confirmation(name, args):
+        if not confirm.password_matches(payload.get("password")):
+            raise HTTPException(
+                status_code=401,
+                detail=f"Mot de passe requis pour {name} ({confirm.reason_for(name)}).")
+
+    handler = ALL_HANDLERS.get(name) or mcp_bridge.MCP_HANDLERS.get(name)
+    if handler is None:
+        raise HTTPException(status_code=404, detail=f"Tool '{name}' introuvable.")
+
+    import time as _t
+    t0 = _t.time()
+    try:
+        result = handler(args)
+        succes = bool(result.get("success", True)) if isinstance(result, dict) else True
+    except Exception as exc:  # noqa: BLE001
+        result, succes = {"success": False, "error": f"{type(exc).__name__}: {exc}"}, False
+
+    audit.log_tool_call(
+        device_id=device, tool_name=name, tool_input=args, success=succes,
+        duration_ms=int((_t.time() - t0) * 1000),
+        sensitive=confirm.requires_confirmation(name, args), confirmed=True,
+    )
+    return result
+
+
 @app.get("/devices")
 def list_devices_http(token: str = Depends(verify_token)):
     return {

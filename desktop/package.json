@@ -1,0 +1,24 @@
+{
+  "name": "orion-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Coque de bureau d'Orion — fenêtre cockpit sans bordure + capsule flottante",
+  "main": "main.js",
+  "scripts": {
+    "dev": "cross-env ORION_DEV_URL=http://localhost:5173 electron .",
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "dev.orion.desktop",
+    "productName": "Orion",
+    "files": ["main.js", "preload.js", "capsule.html"],
+    "extraResources": [{ "from": "../frontend/dist", "to": "ui" }],
+    "win": { "target": "nsis" }
+  }
+}
