@@ -5,11 +5,17 @@ interface MicButtonProps {
   isListening: boolean;
   onClick: () => void;
   hint?: string;
+  /** Rendu dans le flux plutot qu'ancre a la fenetre. */
+  inline?: boolean;
 }
 
-export function MicButton({ isListening, onClick, hint }: MicButtonProps) {
+export function MicButton({ isListening, onClick, hint , inline }: MicButtonProps) {
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-3.5">
+    <div className={inline
+      // Dans le cockpit le bouton suit le flux : en `fixed` il retomberait
+      // sur le menu radial en bas de fenetre.
+      ? "relative z-20 mx-auto flex flex-col items-center gap-3.5"
+      : "fixed bottom-20 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-3.5"}>
       <button
         onClick={onClick}
         title="Parler à Orion"

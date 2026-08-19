@@ -10,10 +10,12 @@ import { ToastHost, useToasts } from "@/components/Toast";
 import { useTradingState } from "@/hooks/useTradingState";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { storage } from "@/lib/utils";
+import type { EmbeddedViewProps } from "@/components/cockpit/embed";
+import { TradingDeck } from "@/components/cockpit/trading/TradingDeck";
 
 const TOKEN_KEY = "orion_trading_token";
 
-export function TradingUI() {
+export function TradingUI({ embedded }: EmbeddedViewProps = {}) {
   const [token, setTokenRaw] = useState(() => {
     // Token via ?token=... a priorité (puis nettoyage de l'URL)
     if (typeof window !== "undefined") {
@@ -235,13 +237,42 @@ export function TradingUI() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-trading-bg text-trading-text font-rajdhani overflow-x-hidden">
-      <TradingHeader
+    <div className={embedded
+      ? "h-full overflow-y-auto text-trading-text font-rajdhani"
+      : "min-h-screen bg-trading-bg text-trading-text font-rajdhani overflow-x-hidden"}>
+      {!embedded && <TradingHeader
         market={state.market}
         status={status}
         statusLabel={statusLabel}
-      />
+      />}
 
+      {/* Dans le cockpit : presentation futuriste, meme etat, memes commandes.
+          Hors cockpit : la grille d'origine reste intacte. */}
+      {embedded ? (
+        <div className="h-full p-3">
+          <TradingDeck
+            stats={state.stats}
+            positions={state.open}
+            signal={state.signal}
+            history={state.history}
+            log={state.log}
+            controls={
+              <ControlBar
+                connected={ws.status === "open"}
+                systemActive={!!state.system.active}
+                params={params}
+                setParams={setParams}
+                token={token}
+                setToken={setToken}
+                onConnect={onConnect}
+                onStart={onStart}
+                onStop={onStop}
+                onCloseAll={onCloseAll}
+              />
+            }
+          />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 max-w-[1400px] mx-auto">
         <ControlBar
           connected={ws.status === "open"}
@@ -265,6 +296,7 @@ export function TradingUI() {
 
         <SystemLog entries={state.log} onClear={state.clearLog} />
       </div>
+      )}
 
       <ToastHost toasts={toasts} onDismiss={dismiss} />
     </div>

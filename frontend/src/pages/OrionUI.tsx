@@ -15,6 +15,7 @@ import { useTTSStream } from "@/hooks/useTTSStream";
 import { useChat } from "@/hooks/useChat";
 import { usePanic } from "@/hooks/usePanic";
 import { storage, wsToHttp } from "@/lib/utils";
+import type { EmbeddedViewProps } from "@/components/cockpit/embed";
 
 const STATE_TEXT: Record<SphereState, string> = {
   idle: "STANDBY",
@@ -32,7 +33,7 @@ const STATE_COLOR: Record<SphereState, string> = {
 
 let auditId = 0;
 
-export function OrionUI() {
+export function OrionUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }: EmbeddedViewProps = {}) {
   // ─── Config persistée ───
   const [serverUrl, setServerUrl] = useState(() => {
     const saved = storage.get("orionServerUrl");
@@ -54,8 +55,12 @@ export function OrionUI() {
 
   // ─── Sphere / état UI ───
   const [state, setState] = useState<SphereState>("idle");
+  useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
   const [shapeLabel, setShapeLabel] = useState("SPHÈRE");
-  const audioLevelRef = useRef(0);
+  const localAudioRef = useRef(0);
+  // La coque du cockpit fournit sa propre ref pour animer le reacteur ;
+  // hors cockpit on retombe sur la ref locale, alimentant la Sphere.
+  const audioLevelRef = hostAudioRef ?? localAudioRef;
   const [voicePct, setVoicePct] = useState(0);
   const [voiceServiceState, setVoiceServiceState] = useState<VoiceServiceState>("offline");
   const [voiceServiceDevice, setVoiceServiceDevice] = useState<string | undefined>();
@@ -289,12 +294,12 @@ export function OrionUI() {
   }, [chat.messages, chat.phase]);
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="scanlines" />
+    <div className={embedded ? "flex h-full flex-col" : "h-screen flex flex-col"}>
+      {!embedded && <div className="scanlines" />}
 
       <PasswordGate open={gateOpen} onUnlock={() => setGateOpen(false)} />
 
-      <Header
+      {!embedded && <Header
         variant="orion"
         connected={isConnected}
         onOpenSettings={() => setSettingsOpen((s) => !s)}
@@ -302,11 +307,11 @@ export function OrionUI() {
         onPanicToggle={panic.trigger}
         voiceServiceState={voiceServiceState}
         voiceDeviceId={voiceServiceDevice}
-      />
+      />}
 
       <main className="relative z-[5] flex-1 flex overflow-hidden">
-        {/* ─── Panneau Sphère (gauche) ─── */}
-        <aside className="relative w-[400px] min-w-[400px] flex flex-col items-center justify-center
+        {/* ─── Panneau Sphère (gauche) ─── Dans le cockpit, le réacteur le remplace. */}
+        {!embedded && <aside className="relative w-[400px] min-w-[400px] flex flex-col items-center justify-center
                           border-r border-border overflow-hidden
                           bg-[linear-gradient(135deg,rgba(4,6,13,0)_0%,rgba(0,229,255,0.015)_100%)]">
           {/* Anneaux rotatifs */}
@@ -366,7 +371,7 @@ export function OrionUI() {
           {/* Gradient overlay bas */}
           <div className="absolute bottom-0 left-0 right-0 h-[100px] pointer-events-none z-[3]
                           bg-gradient-to-t from-bg to-transparent" />
-        </aside>
+        </aside>}
 
         {/* ─── Zone chat (droite) ─── */}
         <section className="flex-1 flex flex-col overflow-hidden">

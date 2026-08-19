@@ -11,7 +11,11 @@ export default defineConfig(({ command }) => ({
     alias: { "@": path.resolve(__dirname, "./src") },
   },
   server: {
-    port: 5173,
+    // PORT permet à un lanceur externe d'imposer le port. strictPort évite la
+    // dérive silencieuse de Vite vers 5174, 5175… quand le port est pris :
+    // il vaut mieux échouer franchement que servir sur une adresse inattendue.
+    port: Number(process.env.PORT) || 5173,
+    strictPort: true,
     // En dev : proxy les WebSocket et /api vers le serveur FastAPI sur 8765
     proxy: {
       "/ws": { target: "ws://localhost:8765", ws: true, changeOrigin: true },

@@ -12,6 +12,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useMicRecorder } from "@/hooks/useMicRecorder";
 import { useTTSStream } from "@/hooks/useTTSStream";
 import { storage, wsToHttp } from "@/lib/utils";
+import type { EmbeddedViewProps } from "@/components/cockpit/embed";
 
 const STATE_LABELS: Record<SphereState, string> = {
   idle: "STANDBY",
@@ -20,7 +21,7 @@ const STATE_LABELS: Record<SphereState, string> = {
   speaking: "PARLE",
 };
 
-export function VoiceUI() {
+export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }: EmbeddedViewProps = {}) {
   // ─── Config (persistée) ───
   const [serverUrl, setServerUrl] = useState(() => {
     const saved = storage.get("orionVoiceServerUrl");
@@ -39,6 +40,7 @@ export function VoiceUI() {
 
   // ─── État UI ───
   const [state, setState] = useState<SphereState>("idle");
+  useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
   const [orionText, setOrionText] = useState("Appuie sur le micro pour parler.");
   const [userText, setUserText] = useState("");
   const [toolHint, setToolHint] = useState("");
@@ -51,7 +53,9 @@ export function VoiceUI() {
   const tts = useTTSStream();
 
   // Audio level via ref (la sphère lit en boucle, pas de re-render)
-  const audioLevelRef = useRef(0);
+  const localAudioRef = useRef(0);
+  // Fournie par la coque dans le cockpit, locale sinon (alimente la Sphere).
+  const audioLevelRef = hostAudioRef ?? localAudioRef;
   const [voicePct, setVoicePct] = useState(0);
 
   // ─── WebSocket ───
@@ -242,21 +246,25 @@ export function VoiceUI() {
     :                          "text-cyan";
 
   return (
-    <div className="h-screen flex flex-col">
-      <Header
+    <div className={embedded ? "flex h-full flex-col" : "h-screen flex flex-col"}>
+      {!embedded && <Header
         connected={isConnected}
         onOpenSettings={() => setSettingsOpen(s => !s)}
-      />
+      />}
 
-      <SystemHud  position="top-left" />
-      <NetworkHud position="top-right" />
-      <FreqHud    position="bot-left" rotation={0} />
-      <ShapeHud   position="bot-right" label={shapeLabel} />
+      {!embedded && <>
+        <SystemHud  position="top-left" />
+        <NetworkHud position="top-right" />
+        <FreqHud    position="bot-left" rotation={0} />
+        <ShapeHud   position="bot-right" label={shapeLabel} />
+      </>}
 
-      <main className="relative z-[5] flex-1 flex flex-col items-center justify-center px-5">
-        <DecorativeRings />
+      <main className={embedded
+        ? "relative z-[5] flex flex-col items-center px-5"
+        : "relative z-[5] flex-1 flex flex-col items-center justify-center px-5"}>
+        {!embedded && <DecorativeRings />}
 
-        <Sphere
+        {!embedded && <Sphere
           state={state}
           audioLevelRef={audioLevelRef}
           onShapeChange={(name) => {
@@ -268,9 +276,9 @@ export function VoiceUI() {
             };
             setShapeLabel(labels[name] ?? name.toUpperCase());
           }}
-        />
+        />}
 
-        <div className="relative z-[4] flex flex-col items-center gap-1.5 -mt-10">
+        {!embedded && <div className="relative z-[4] flex flex-col items-center gap-1.5 -mt-10">
           <div className="font-orbitron text-[9px] tracking-[4px] text-text-dim uppercase">
             Réseau neuronal IA
           </div>
@@ -278,7 +286,7 @@ export function VoiceUI() {
                           transition-colors ${stateColor}`}>
             {STATE_LABELS[state]}
           </div>
-        </div>
+        </div>}
 
         <div className="relative z-[4] mt-6 w-full max-w-[720px] min-h-[100px]
                         flex flex-col gap-2.5 text-center">
@@ -302,9 +310,10 @@ export function VoiceUI() {
         isListening={mic.isRecording}
         onClick={toggleMic}
         hint={micHint}
+        inline={embedded}
       />
 
-      <EnergyBars voiceLevel={voicePct / 100} />
+      {!embedded && <EnergyBars voiceLevel={voicePct / 100} />}
 
       <ToastHost toasts={toasts} onDismiss={dismiss} />
 
