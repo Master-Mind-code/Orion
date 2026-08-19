@@ -222,7 +222,14 @@ def memory_index_file(path: str, namespace: str = "default", tags: list[str] | N
 
 
 def memory_index_dir(path: str, namespace: str = "default", extensions: list[str] | None = None,
-                     recursive: bool = True, max_files: int = 100) -> dict:
+                     recursive: bool = True, max_files: int = 100,
+                     chunk_chars: int = 800) -> dict:
+    """Indexe un dossier entier.
+
+    chunk_chars descend jusqu'a ~300 pour des notes courtes et denses : a 800,
+    une note d'un millier de caracteres ne fait qu'un ou deux fragments, et la
+    reponse cherchee se noie parmi des paragraphes sans rapport.
+    """
     d = Path(path).expanduser()
     if not d.exists() or not d.is_dir():
         return {"success": False, "error": f"Dossier introuvable : {d}"}
@@ -244,7 +251,8 @@ def memory_index_dir(path: str, namespace: str = "default", extensions: list[str
     chunks_total = 0
     failures = []
     for f in files:
-        result = memory_index_file(str(f), namespace=namespace)
+        result = memory_index_file(str(f), namespace=namespace,
+                                   chunk_chars=int(chunk_chars))
         if result.get("success"):
             indexed += 1
             chunks_total += result.get("chunks_added", 0)

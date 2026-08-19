@@ -14,6 +14,7 @@ from .automation import HANDLERS as _AUTO_HANDLERS
 from .windows_ctrl import HANDLERS as _WINCTRL_HANDLERS
 from .termux_mobile import HANDLERS as _TERMUX_HANDLERS
 from .vision import HANDLERS as _VISION_HANDLERS
+from .camera_vision import HANDLERS as _CAMERA_HANDLERS
 from .audit_query import HANDLERS as _AUDIT_HANDLERS
 from server.safety_backup import HANDLERS as _BACKUP_HANDLERS
 from server.mcp_bridge import HANDLERS as _MCP_HANDLERS
@@ -47,6 +48,7 @@ ALL_HANDLERS = {
     **_WINCTRL_HANDLERS,
     **_TERMUX_HANDLERS,
     **_VISION_HANDLERS,
+    **_CAMERA_HANDLERS,
     **_AUDIT_HANDLERS,
     **_BACKUP_HANDLERS,
     **_MCP_HANDLERS,

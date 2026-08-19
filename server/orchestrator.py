@@ -816,6 +816,73 @@ TOOLS = [
             "required": ["path"],
         },
     },
+    # ─── Vision par caméra ────────────────────────────────────
+    {
+        "name": "camera_status",
+        "description": "Disponibilité de la caméra, état de l'interrupteur ORION_CAMERA_ENABLED, "
+                       "applications de vision lançables et celles en cours. Lecture seule, "
+                       "répond même caméra désactivée. À appeler avant toute prise de vue.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "camera_look",
+        "description": "Que vois-tu ? Prend UNE image et y détecte les objets (personne, téléphone, "
+                       "tasse, ordinateur...) avec score et position. Rapide. Pour une description "
+                       "libre plutôt qu'une liste de classes, préférer camera_snapshot puis "
+                       "analyze_image. Nécessite ORION_CAMERA_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "seuil": {"type": "number", "description": "Score minimum 0-1", "default": 0.4},
+                "max_objets": {"type": "integer", "default": 8},
+                "save": {"type": "boolean", "description": "Enregistrer aussi l'image", "default": False},
+            },
+        },
+    },
+    {
+        "name": "camera_snapshot",
+        "description": "Prend une photo et l'enregistre. Le chemin rendu se passe directement à "
+                       "analyze_image pour faire décrire la scène par le modèle de vision. "
+                       "Nécessite ORION_CAMERA_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Chemin de sortie (auto dans data/captures si vide)"},
+            },
+        },
+    },
+    {
+        "name": "camera_gesture",
+        "description": "Lit le geste de la ou des mains devant la caméra : poing, main ouverte, "
+                       "victoire, pouce levé, index, cornes... Renvoie aussi le nombre de doigts "
+                       "levés. Nécessite ORION_CAMERA_ENABLED=true.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "vision_app_start",
+        "description": "Lance une application de vision dans sa propre fenêtre : 'detection' "
+                       "(mains/visages/objets), 'drowsiness' (somnolence et distraction du "
+                       "conducteur), 'surveillance' (alerte intrus), 'comptage' (franchissement "
+                       "de ligne), 'domotique' (extinction sur absence). Boucle bloquante à part, "
+                       "pilotée au clavier. Nécessite ORION_CAMERA_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "app": {"type": "string",
+                        "description": "detection | drowsiness | surveillance | comptage | domotique"},
+            },
+            "required": ["app"],
+        },
+    },
+    {
+        "name": "vision_app_stop",
+        "description": "Arrête une application de vision lancée par vision_app_start, ou toutes si "
+                       "aucune n'est précisée.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"app": {"type": "string", "description": "Omettre pour tout arrêter"}},
+        },
+    },
     # ─── Pont MCP ─────────────────────────────────────────────
     {
         "name": "mcp_status",
@@ -840,6 +907,8 @@ _DEVICE_BOUND_TOOLS = {
     "automation_status", "mouse_drag", "mouse_scroll", "keyboard_key",
     "clipboard_get", "clipboard_set",
     "list_windows", "focus_window", "window_control",
+    "camera_status", "camera_look", "camera_snapshot", "camera_gesture",
+    "vision_app_start", "vision_app_stop",
     # Tools Termux : ne s'exécutent QUE sur worker Android
     "termux_battery", "termux_location", "termux_send_sms", "termux_list_sms",
     "termux_contacts", "termux_call", "termux_vibrate", "termux_notification",

@@ -1,0 +1,18 @@
+# Vision par caméra pour Orion (server/vision/ + tools camera_*).
+# Installe avec : pip install -r requirements-vision.txt
+#
+# Tools concernés : camera_status, camera_look, camera_snapshot, camera_gesture,
+#                   vision_app_start, vision_app_stop
+#
+# Le modèle de détection d'objets (efficientdet_lite0.tflite, 4.6 Mo) voyage
+# avec le code dans server/vision/models/ — rien à télécharger.
+#
+# Note de version : le projet d'origine épinglait mediapipe==0.10.14 car
+# mediapipe >= 0.10.15 supprime l'API `mp.solutions` qu'utilisait cvzone.
+# Vérifié le 2026-08-19 : cvzone 1.6+ est passé à l'API Tasks et fonctionne
+# avec mediapipe 0.10.35. L'épinglage n'est plus nécessaire.
+
+opencv-python>=4.10
+mediapipe>=0.10.14
+cvzone>=1.6.1
+numpy>=1.24

@@ -50,3 +50,6 @@ mcp_servers.json
 
 # Config Claude Code locale (permissions machine) ; launch.json est commite
 .claude/settings.local.json
+
+# Modele telecharge automatiquement par cvzone au premier usage de la camera
+hand_landmarker.task

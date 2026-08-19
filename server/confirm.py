@@ -53,6 +53,11 @@ DEFAULT_DANGEROUS: dict[str, str] = {
     "keyboard_key":      "appui sur une combinaison de touches",
     # Contrôle des fenêtres : 'close' peut faire perdre du travail non enregistré
     "window_control":    "action sur une fenêtre (fermeture, déplacement...)",
+    # Caméra : filmer la pièce est au moins aussi intrusif qu'une capture d'écran
+    "camera_look":       "prise de vue par la caméra",
+    "camera_snapshot":   "photo par la caméra",
+    "camera_gesture":    "prise de vue par la caméra",
+    "vision_app_start":  "démarrage d'une application de vision (caméra continue)",
     # Mémoire long terme : effacement
     "memory_clear":      "effacement complet de la mémoire long terme",
     "memory_forget":     "suppression d'un souvenir",
