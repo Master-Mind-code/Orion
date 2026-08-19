@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { VoiceUI } from "./pages/VoiceUI";
 import { OrionUI } from "./pages/OrionUI";
 import { TradingUI } from "./pages/TradingUI";
+import { CockpitUI } from "./pages/CockpitUI";
 
-type Route = "orion" | "voice" | "trading";
+type Route = "orion" | "voice" | "trading" | "cockpit";
 
 function pickRoute(pathname: string): Route {
   if (pathname.startsWith("/voice")) return "voice";
   if (pathname.startsWith("/trading")) return "trading";
+  if (pathname.startsWith("/cockpit")) return "cockpit";
   return "orion";
 }
 
@@ -25,6 +27,7 @@ export default function App() {
   switch (route) {
     case "voice":   return <VoiceUI />;
     case "trading": return <TradingUI />;
+    case "cockpit": return <CockpitUI />;
     default:        return <OrionUI />;
   }
 }

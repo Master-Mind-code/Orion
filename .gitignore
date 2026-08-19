@@ -47,3 +47,6 @@ build/
 
 # Config MCP locale (chemins machine-specifiques ; l example est commite)
 mcp_servers.json
+
+# Config Claude Code locale (permissions machine) ; launch.json est commite
+.claude/settings.local.json
