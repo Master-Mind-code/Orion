@@ -22,13 +22,61 @@ const PRELOAD = path.join(__dirname, "preload.js");
 let cockpit = null;
 let capsule = null;
 
+/** Page de secours : sans elle, un serveur Vite absent donne une fenêtre noire
+ *  et une erreur uniquement dans la console, illisible pour qui lance l'app. */
+function pageErreur(message) {
+  const html = `<!doctype html><meta charset="utf-8">
+<style>
+  html,body{height:100%;margin:0;background:#04060d;color:#b8d8f0;
+    font:14px/1.6 "Segoe UI",system-ui,sans-serif;display:grid;place-items:center}
+  .b{max-width:560px;padding:32px;border:1px solid rgba(0,229,255,.18);border-radius:16px;
+    background:linear-gradient(160deg,rgba(8,18,38,.9),rgba(4,8,18,.9))}
+  h1{margin:0 0 12px;font-size:15px;letter-spacing:.28em;color:#00e5ff;text-transform:uppercase}
+  code{display:block;margin-top:14px;padding:10px 12px;border-radius:8px;
+    background:rgba(0,0,0,.45);color:#7ee787;font-family:Consolas,monospace;font-size:13px}
+  p{margin:8px 0;color:rgba(150,195,225,.8)}
+</style>
+<div class="b"><h1>Orion — interface injoignable</h1>
+<p>${message}</p>
+<p>Lance le serveur d'interface dans un autre terminal :</p>
+<code>npm --prefix frontend run dev</code>
+<p>Puis relance cette fenêtre. Le script <code>npm --prefix desktop run dev</code>
+   démarre normalement les deux ensemble.</p></div>`;
+  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+}
+
+/** Attend que le serveur de développement réponde.
+ *
+ *  Vite met une seconde ou deux à se lever ; sans cette attente, la coque
+ *  lancée en parallèle tombe systématiquement sur ERR_CONNECTION_REFUSED. */
+async function attendreServeur(url, essais = 60, delaiMs = 500) {
+  for (let i = 0; i < essais; i++) {
+    try {
+      const r = await fetch(url, { method: "GET" });
+      if (r.ok || r.status === 404) return true;
+    } catch {
+      /* pas encore levé */
+    }
+    await new Promise((r) => setTimeout(r, delaiMs));
+  }
+  return false;
+}
+
 /** Charge une route de l'interface, depuis le serveur Vite en dev ou les
  *  fichiers empaquetés en production. */
-function chargerUI(win, route) {
-  if (DEV_URL) return win.loadURL(`${DEV_URL}${route}`);
-  return win.loadFile(path.join(process.resourcesPath, "ui", "index.html"), {
-    hash: route,
-  });
+async function chargerUI(win, route) {
+  if (!DEV_URL) {
+    return win.loadFile(path.join(process.resourcesPath, "ui", "index.html"), {
+      hash: route,
+    });
+  }
+  try {
+    await win.loadURL(`${DEV_URL}${route}`);
+  } catch {
+    if (!win.isDestroyed()) {
+      await win.loadURL(pageErreur(`Aucune réponse sur ${DEV_URL}.`));
+    }
+  }
 }
 
 function creerCockpit() {
@@ -177,7 +225,14 @@ ipcMain.handle("orion:infos", () => ({
 
 /* ──────────────────────────── Cycle de vie ─────────────────────────── */
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // On attend le serveur d'interface AVANT de créer les fenêtres : sinon elles
+  // s'ouvrent sur une page d'erreur et il faut les recharger à la main.
+  if (DEV_URL) {
+    const pret = await attendreServeur(DEV_URL);
+    if (!pret) console.warn(`[orion] ${DEV_URL} ne répond pas — page de secours.`);
+  }
+
   creerCockpit();
   creerCapsule();
 

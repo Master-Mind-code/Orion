@@ -63,8 +63,18 @@ npm --prefix desktop install     # seulement pour l'application de bureau
 ### Application de bureau
 
 ```bash
-npm --prefix frontend run dev     # terminal 1
-npm --prefix desktop run dev      # terminal 2
+npm --prefix desktop run dev
+```
+
+Une seule commande : elle démarre le serveur d'interface **et** la coque native,
+et la coque attend que l'interface réponde avant d'ouvrir ses fenêtres. Si le
+port 5173 est déjà pris, Vite échoue franchement au lieu de glisser sur un autre
+port — libère-le ou coupe l'instance qui tourne déjà.
+
+Pour ne lancer que la coque, l'interface tournant déjà ailleurs :
+
+```bash
+npm --prefix desktop run dev:coque
 ```
 
 Orion s'ouvre en fenêtre native sans bordure, plus une **capsule flottante**
