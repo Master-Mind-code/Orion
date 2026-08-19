@@ -68,3 +68,89 @@ export async function serveurEnLigne(): Promise<boolean> {
     return false;
   }
 }
+
+export interface StatutServeur {
+  status?: string;
+  controllers?: string[];
+  workers?: { id: string; [k: string]: unknown }[];
+  voice?: Record<string, unknown>;
+  panic?: { active?: boolean; reason?: string; by_device?: string };
+  rate_limit?: Record<string, unknown>;
+  confirm?: { enabled?: boolean };
+  audit_db_kb?: number;
+}
+
+/** `/status` est public : pas de token, et il répond même si le reste est verrouillé. */
+export async function lireStatut(): Promise<StatutServeur | null> {
+  try {
+    const r = await fetch(`${baseHttp()}/status`, { cache: "no-store" });
+    return r.ok ? ((await r.json()) as StatutServeur) : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface LigneAudit {
+  id: number;
+  ts: number;
+  device_id: string;
+  tool_name: string;
+  input_preview: string;
+  success: number;
+  error: string | null;
+  duration_ms: number;
+  sensitive: number;
+}
+
+export interface StatsAudit {
+  enabled?: boolean;
+  total?: number;
+  success?: number;
+  failed?: number;
+  sensitive?: number;
+  top_tools?: { tool: string; count: number }[];
+}
+
+export async function lireAudit(heures = 24, limite = 40): Promise<
+  { stats: StatsAudit; items: LigneAudit[] } | { erreur: string }
+> {
+  const token = storage.get("orionToken");
+  if (!token) return { erreur: "Token serveur requis pour lire l'audit." };
+  try {
+    const r = await fetch(
+      `${baseHttp()}/api/audit?token=${encodeURIComponent(token)}&hours=${heures}&limit=${limite}`,
+      { cache: "no-store" },
+    );
+    if (!r.ok) return { erreur: r.status === 401 ? "Token refusé." : `HTTP ${r.status}` };
+    return await r.json();
+  } catch (exc) {
+    return { erreur: exc instanceof Error ? exc.message : "Serveur injoignable." };
+  }
+}
+
+/** Coupe-circuit global. Réversible via relacherPanic(). */
+export async function declencherPanic(raison: string): Promise<boolean> {
+  const token = storage.get("orionToken");
+  if (!token) return false;
+  const q = new URLSearchParams({ token, reason: raison, by: "cockpit" });
+  try {
+    const r = await fetch(`${baseHttp()}/api/panic?${q}`, { method: "POST" });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function relacherPanic(): Promise<boolean> {
+  const token = storage.get("orionToken");
+  if (!token) return false;
+  try {
+    const r = await fetch(
+      `${baseHttp()}/api/panic/release?token=${encodeURIComponent(token)}`,
+      { method: "POST" },
+    );
+    return r.ok;
+  } catch {
+    return false;
+  }
+}

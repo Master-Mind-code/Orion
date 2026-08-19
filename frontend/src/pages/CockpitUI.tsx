@@ -18,6 +18,7 @@ import { CK, SKIN, type CockpitState } from "@/lib/cockpit-theme";
 import { VoiceUI } from "./VoiceUI";
 import { TradingUI } from "./TradingUI";
 import { BureauDeck } from "@/components/cockpit/BureauDeck";
+import { SystemeDeck } from "@/components/cockpit/SystemeDeck";
 
 const MODES: RadialItem[] = [
   { id: "voice",   label: "Voix",    icon: Mic },
@@ -29,7 +30,7 @@ const MODES: RadialItem[] = [
 /** Place du réacteur selon la densité du mode : plus le contenu est dense,
  *  plus le cœur s'efface pour ne pas gêner la lecture. */
 const CORE_SCALE: Record<string, number> = {
-  voice: 1, trading: 0.42, desktop: 0.45, system: 0.9,
+  voice: 1, trading: 0.42, desktop: 0.45, system: 0.45,
 };
 
 /** Panneau de verre biseauté — la brique de base des vidéos de référence. */
@@ -137,17 +138,13 @@ export function CockpitUI() {
         </div>
       )}
 
-      {/* ── Mode encore à construire ── */}
+      {/* ── Système : santé, pont MCP, audit, coupe-circuit ── */}
       {mode === "system" && (
-        <div className="pointer-events-auto absolute bottom-[204px] left-1/2 w-[min(60vw,680px)] -translate-x-1/2">
-          <GlassPanel title="Système" accent={skin.key}>
-            <div className="p-6 text-center">
-              <p className="font-rajdhani text-sm text-text-dim">Mode Système — à construire.</p>
-              <p className="font-tech mt-2 text-[10px] uppercase tracking-[0.2em] text-text-dim/60">
-                pont MCP, audit, santé des services
-              </p>
-            </div>
-          </GlassPanel>
+        <div
+          className="pointer-events-auto absolute bottom-[204px] top-16"
+          style={{ left: "var(--ck-inset)", right: "var(--ck-inset)" }}
+        >
+          <SystemeDeck />
         </div>
       )}
 
