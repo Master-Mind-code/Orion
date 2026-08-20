@@ -170,3 +170,21 @@ body.trading-mode::after { display: none; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.15); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.35); }
+
+/* ── Animations du cockpit (reprises de la maquette) ─────────────────── */
+@keyframes ck-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ck-spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+@keyframes ck-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .22; } }
+@keyframes ck-soft { 0%, 100% { opacity: .75; } 50% { opacity: .3; } }
+@keyframes ck-blip {
+  0%   { opacity: 0; transform: scale(.3); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+@keyframes ck-drift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+@keyframes ck-scan {
+  0%   { top: -2%; opacity: 0; }
+  12%  { opacity: .55; }
+  88%  { opacity: .55; }
+  100% { top: 102%; opacity: 0; }
+}

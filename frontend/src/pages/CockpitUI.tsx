@@ -9,19 +9,19 @@
  * panneau de discussion recouvrait le cockpit et vidait de son sens la coque 3D.
  * La vue texte reste accessible sur sa route dédiée `/`.
  */
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, LineChart, Mic, MonitorCog } from "lucide-react";
 
 import { CockpitShell } from "@/components/cockpit/CockpitShell";
-import type { RadialItem } from "@/components/cockpit/RadialMenu";
+import type { ModeItem } from "@/components/cockpit/ModeDock";
 import { CK, SKIN, type CockpitState } from "@/lib/cockpit-theme";
 import { VoiceUI } from "./VoiceUI";
 import { TradingUI } from "./TradingUI";
 import { BureauDeck } from "@/components/cockpit/BureauDeck";
 import { SystemeDeck } from "@/components/cockpit/SystemeDeck";
 
-const MODES: RadialItem[] = [
-  { id: "voice",   label: "Voix",    icon: Mic },
+const MODES: ModeItem[] = [
+  { id: "voice",   label: "Voix",    icon: Mic, principal: true },
   { id: "trading", label: "Trading", icon: LineChart },
   { id: "desktop", label: "Bureau",  icon: MonitorCog },
   { id: "system",  label: "Système", icon: Activity },
@@ -90,29 +90,58 @@ export function CockpitUI() {
   // vues, une fonction recréée à chaque rendu y déclencherait une boucle.
   const handleState = useCallback((s: CockpitState) => setState(s), []);
 
+  // Enchaînement d'états repris de la maquette. Les minuteries sont gardées en
+  // ref pour être annulées : sans ça, deux clics rapprochés laissent la
+  // première séquence remettre l'état à idle en plein milieu de la seconde.
+  const chaine = useRef<number[]>([]);
+  const couperChaine = () => {
+    chaine.current.forEach(window.clearTimeout);
+    chaine.current = [];
+  };
+  useEffect(() => couperChaine, []);
+
+  /** Clic sur Voix : écoute → traitement → parole → repos. */
+  const basculerVoix = useCallback(() => {
+    couperChaine();
+    const suivant: CockpitState =
+      mode !== "voice" ? "listening" : state === "listening" ? "processing" : "listening";
+    setMode("voice");
+    setState(suivant);
+    if (suivant === "processing") {
+      chaine.current.push(
+        window.setTimeout(() => setState("speaking"), 1500),
+        window.setTimeout(() => setState("idle"), 4600),
+      );
+    }
+  }, [mode, state]);
+
+  /** Changement de mode : Orion réfléchit, répond, puis retombe au repos. */
+  const choisirMode = useCallback((id: string) => {
+    if (id === "voice") return basculerVoix();
+    couperChaine();
+    setMode(id);
+    setState("processing");
+    chaine.current.push(
+      window.setTimeout(() => setState("speaking"), 1400),
+      window.setTimeout(() => setState("idle"), 4200),
+    );
+  }, [basculerVoix]);
+
   return (
     <CockpitShell
       state={state}
       audioLevelRef={audioLevelRef}
       items={MODES}
       active={mode}
-      onSelect={setMode}
+      onSelect={choisirMode}
       coreScale={CORE_SCALE[mode] ?? 0.9}
-      meta={
-        <div className="flex gap-6">
-          <Readout label="Mode" value={mode.toUpperCase()} accent={skin.key} />
-          <Readout label="État" value={skin.label} accent={skin.accent} />
-        </div>
-      }
     >
-      {/* ── Voix : aucun panneau. La transcription flotte au-dessus du menu,
-             le cockpit reste entierement visible derriere. ── */}
+      {/* ── Voix : sous le réacteur, hors de la colonne centrale réservée
+             aux decks. Pas de -translate-x-1/2 : un ancêtre transformé devient
+             le bloc conteneur des enfants `fixed` (toasts, modal). ── */}
       {mode === "voice" && (
-        // Pas de -translate-x-1/2 ici : un ancetre transforme devient le bloc
-        // conteneur des descendants `fixed` (panneau Parametres, toasts), qui
-        // se retrouvaient ancres au conteneur au lieu de la fenetre.
-        <div className="pointer-events-auto absolute inset-x-0 bottom-[200px] mx-auto
-                        w-[min(76vw,900px)] text-center">
+        <div className="pointer-events-auto absolute inset-x-0 mx-auto text-center"
+             style={{ top: "72%", width: "44%" }}>
           <VoiceUI embedded onStateChange={handleState} onModeChange={setMode}
                    audioLevelRef={audioLevelRef} />
         </div>
@@ -121,32 +150,17 @@ export function CockpitUI() {
       {/* ── Trading : pleine surface, les cartes du deck portent deja leur
              propre chrome ; un panneau de verre par-dessus ferait doublon. ── */}
       {mode === "trading" && (
-        <div
-          className="pointer-events-auto absolute bottom-[204px] top-16"
-          style={{ left: "var(--ck-inset)", right: "var(--ck-inset)" }}
-        >
-          <TradingUI embedded />
-        </div>
+        <div className="pointer-events-auto h-full"><TradingUI embedded /></div>
       )}
 
       {/* ── Bureau : poste de contrôle natif ── */}
       {mode === "desktop" && (
-        <div
-          className="pointer-events-auto absolute bottom-[204px] top-16"
-          style={{ left: "var(--ck-inset)", right: "var(--ck-inset)" }}
-        >
-          <BureauDeck />
-        </div>
+        <div className="pointer-events-auto h-full"><BureauDeck /></div>
       )}
 
       {/* ── Système : santé, pont MCP, audit, coupe-circuit ── */}
       {mode === "system" && (
-        <div
-          className="pointer-events-auto absolute bottom-[204px] top-16"
-          style={{ left: "var(--ck-inset)", right: "var(--ck-inset)" }}
-        >
-          <SystemeDeck />
-        </div>
+        <div className="pointer-events-auto h-full"><SystemeDeck /></div>
       )}
 
     </CockpitShell>

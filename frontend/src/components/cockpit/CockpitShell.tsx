@@ -1,47 +1,52 @@
 /**
- * Coque commune à tous les modes d'Orion.
+ * Coque du cockpit — implémentation de la maquette « Cockpit Orion ».
  *
- * Empilement, du fond vers l'avant :
- *   z-0   fond (grille + lueur)
- *   z-10  réacteur WebGL (seule couche avec du bloom)
- *   z-20  châssis SVG
- *   z-30  menu radial + barres d'état
- *   z-40  contenu du mode (children)
+ * Composition figée sur une scène de 1920×1080 mise à l'échelle (voir Stage) :
+ * bandeau, rails latéraux, quatre cadrans de verre aux angles, réacteur au
+ * centre, barre de modes en bas.
  *
- * Le contenu passe au-dessus du réacteur, qui reste visible en arrière-plan :
- * c'est ce qui donne la sensation de profondeur des références.
+ * Répartition des techniques, conforme à la maquette :
+ *   - réacteur et orbe en canvas 2D (ReactorCanvas) — halo et traînées obtenus
+ *     par dégradés et `shadowBlur`, sans contexte WebGL ni bloom ;
+ *   - cadrans, texte et graduations en SVG/DOM, pour rester nets au pixel ;
+ *   - le contenu d'un mode s'affiche au centre et le réacteur s'efface.
+ *
+ * La version three.js reste dans ReactorCore.tsx, inutilisée ici : elle donnait
+ * du volume mais s'écartait du design.
  */
 import type { ReactNode } from "react";
 import { Minus, Pin, Square, X } from "lucide-react";
 
-import { CK, SKIN, type CockpitState } from "@/lib/cockpit-theme";
+import { SKIN, type CockpitState } from "@/lib/cockpit-theme";
 import { agirFenetre, basculerCapsule, estBureau } from "@/lib/desktop";
-import { CockpitFrame } from "./CockpitFrame";
-import { ReactorCore } from "./ReactorCore";
-import { RadialMenu, type RadialItem } from "./RadialMenu";
+import { ReactorCanvas } from "./ReactorCanvas";
+import { ModeDock, type ModeItem } from "./ModeDock";
+import { Stage, StageFond, StageRails } from "./Stage";
+import { ChargePanel, MemoirePanel, RadarPanel, SpectrePanel } from "./panels/HudPanels";
 
 interface ShellProps {
   state?: CockpitState;
   audioLevelRef?: React.MutableRefObject<number>;
-  items: RadialItem[];
+  items: ModeItem[];
   active: string;
   onSelect: (id: string) => void;
-  /** Ligne d'état à gauche du bandeau supérieur. */
-  status?: ReactNode;
-  /** Ligne d'état à droite (latence, device, provider...). */
-  meta?: ReactNode;
-  /** Réduit le réacteur pour laisser la place à un contenu dense. */
+  /** Phrase sous le réacteur, en mode conversation. */
+  caption?: string;
+  /** Ligne d'état en bas de scène. */
+  footer?: string;
+  /** Réduit le réacteur quand un deck occupe le centre. */
   coreScale?: number;
   children?: ReactNode;
 }
 
 /** Commandes de fenêtre : la coque Electron est sans bordure, il n'y a donc
- *  aucun bouton système. Absentes dans un navigateur, où elles n'ont pas de sens. */
+ *  aucun bouton système. Absentes en navigateur, où elles n'ont pas de sens. */
 function WindowControls() {
   if (!estBureau()) return null;
   const btn = "rounded p-1.5 text-text-dim transition hover:bg-white/10 hover:text-text";
   return (
-    <div className="flex items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+    <div className="flex items-center gap-1"
+         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
       <button className={btn} title="Capsule flottante" onClick={() => basculerCapsule()}>
         <Pin size={13} strokeWidth={1.8} />
       </button>
@@ -51,10 +56,8 @@ function WindowControls() {
       <button className={btn} title="Agrandir" onClick={() => agirFenetre("agrandir")}>
         <Square size={11} strokeWidth={1.8} />
       </button>
-      <button
-        className="rounded p-1.5 text-text-dim transition hover:bg-red/80 hover:text-white"
-        title="Fermer" onClick={() => agirFenetre("fermer")}
-      >
+      <button className="rounded p-1.5 text-text-dim transition hover:bg-red/80 hover:text-white"
+              title="Fermer" onClick={() => agirFenetre("fermer")}>
         <X size={13} strokeWidth={1.8} />
       </button>
     </div>
@@ -63,100 +66,115 @@ function WindowControls() {
 
 export function CockpitShell({
   state = "idle", audioLevelRef, items, active, onSelect,
-  status, meta, coreScale = 1, children,
+  caption, footer = "CTRL+ALT+O · RAPPEL COCKPIT · MCP PRÊT", coreScale = 1, children,
 }: ShellProps) {
   const skin = SKIN[state];
+  const modeVoix = active === "voice";
 
   return (
-    <div
-      className="relative h-screen w-screen overflow-hidden bg-bg text-text"
-      // Marge latérale unique, partagée par le bandeau et les panneaux des
-      // modes : figée en px, le cockpit se disloquait sous 1100px de large.
-      style={{ ["--ck-inset" as string]: "clamp(14px, 6vw, 132px)" }}
-    >
-      {/* ── Fond ── */}
-      <div className="absolute inset-0 z-0">
-        <div
-          className="absolute inset-0 opacity-[0.16]"
-          style={{
-            backgroundImage:
-              `linear-gradient(${CK.cyan}18 1px, transparent 1px),
-               linear-gradient(90deg, ${CK.cyan}18 1px, transparent 1px)`,
-            backgroundSize: "58px 58px",
-            maskImage: "radial-gradient(ellipse at center, #000 20%, transparent 78%)",
-          }}
-        />
-        <div
-          className="absolute inset-0 transition-colors duration-700"
-          style={{
-            background: `radial-gradient(ellipse 70% 55% at 50% 48%, ${skin.key}14 0%, transparent 70%)`,
-          }}
-        />
-      </div>
+    <Stage>
+      <StageFond />
 
-      {/* ── Réacteur ──
-          Centré dans la zone HAUTE, pas dans la fenêtre entière : le bas est
-          réservé à l'éventail de modes, qui sinon se superpose aux anneaux. */}
-      <div
-        className="absolute inset-x-0 top-0 z-10 transition-transform duration-500"
-        style={{ bottom: 168, transform: `scale(${coreScale})` }}
-      >
-        <ReactorCore state={state} audioLevelRef={audioLevelRef} className="h-full w-full" />
-      </div>
-
-      {/* ── Châssis ── */}
-      <CockpitFrame color={skin.key} accent={skin.accent} />
-
-      {/* ── Bandeau supérieur ── */}
-      <header
-        className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between py-6"
-        style={{ paddingLeft: "var(--ck-inset)", paddingRight: "var(--ck-inset)" }}
-      >
-        <div className="pointer-events-auto flex items-center gap-3">
-          <span
-            className="inline-block h-2 w-2 rounded-full animate-pulse-dot"
-            style={{ background: skin.key, boxShadow: `0 0 10px ${skin.key}` }}
-          />
-          <span className="font-orbitron text-lg tracking-[0.34em]" style={{ color: skin.key }}>
+      {/* ── Bandeau ── */}
+      <div className="pointer-events-none absolute left-0 right-0 flex items-center justify-between"
+           style={{ top: 34, padding: "0 52px" }}>
+        <div className="pointer-events-auto flex items-center" style={{ gap: 14 }}>
+          <span style={{
+            width: 9, height: 9, borderRadius: "50%", background: skin.key,
+            boxShadow: `0 0 12px ${skin.key}`, animation: "ck-pulse 2.6s ease-in-out infinite",
+          }} />
+          <span className="font-orbitron"
+                style={{ fontSize: 19, letterSpacing: ".44em", color: "#d8f4ff",
+                         textShadow: "0 0 18px rgba(0,229,255,.55)" }}>
             ORION
           </span>
-          <span className="font-tech text-[10px] uppercase tracking-[0.2em] text-text-dim">
+          <span className="font-tech"
+                style={{ fontSize: 10, letterSpacing: ".3em", color: "rgba(120,170,210,.5)" }}>
             {skin.label}
           </span>
         </div>
-        <div className="pointer-events-auto flex items-center gap-4 text-right">
-          {status}
-          {meta}
+        <div className="pointer-events-auto flex items-center" style={{ gap: 38 }}>
+          {[["MODE", active.toUpperCase(), skin.key],
+            ["ÉTAT", skin.label, skin.accent]].map(([libelle, valeur, couleur]) => (
+            <div key={libelle} className="flex flex-col items-end" style={{ gap: 3 }}>
+              <span className="font-tech"
+                    style={{ fontSize: 9, letterSpacing: ".24em", color: "rgba(120,170,210,.45)" }}>
+                {libelle}
+              </span>
+              <span className="font-orbitron"
+                    style={{ fontSize: 13, letterSpacing: ".14em", color: couleur }}>
+                {valeur}
+              </span>
+            </div>
+          ))}
           <WindowControls />
         </div>
-      </header>
+      </div>
 
-      {/* Zone de glissement de la fenêtre sans bordure. Purement Electron :
-          dans un navigateur, -webkit-app-region est ignoré. Elle s'arrête avant
-          les boutons, sinon ils deviennent inertes. */}
+      {/* Zone de glissement de la fenêtre sans bordure (ignorée en navigateur). */}
       {estBureau() && (
-        <div
-          className="absolute left-0 right-64 top-0 z-20 h-14"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-        />
+        <div className="absolute left-0 top-0" style={{ right: 420, height: 78,
+             WebkitAppRegion: "drag" } as React.CSSProperties} />
       )}
 
-      {/* ── Contenu du mode ── */}
-      {/* Le contenu se place lui-même : le cœur doit rester dégagé, ce qu'un
-          centrage automatique empêcherait. pointer-events-none sur le conteneur,
-          réactivé par chaque panneau, pour ne pas bloquer le menu en dessous. */}
+      <StageRails />
+
+      {/* ── Réacteur ── */}
+      <div
+        className="pointer-events-none absolute"
+        style={{
+          left: "50%", top: "44%", width: 660, height: 660,
+          transform: `translate(-50%,-50%) scale(${coreScale})`,
+          opacity: coreScale < 0.6 ? 0.35 : 1,
+          transition: "transform .9s cubic-bezier(.4,0,.2,1), opacity .9s ease",
+        }}
+      >
+        <ReactorCanvas state={state} audioLevelRef={audioLevelRef}
+                       className="h-full w-full" />
+      </div>
+
+      {/* ── Cadrans ── */}
+      <RadarPanel state={state} style={{ left: "2.4%", top: "6.2%", width: "25.5%", height: "35%" }} />
+      <ChargePanel state={state} style={{ right: "2.4%", top: "8.5%", width: "25.5%", height: "31%" }} />
+      <MemoirePanel state={state} style={{ left: "2.4%", top: "48.5%", width: "25.5%", height: "31%" }} />
+      <SpectrePanel state={state} levelRef={audioLevelRef}
+                    meta={state === "listening" ? "ENTRÉE MICRO"
+                          : state === "speaking" ? "SORTIE TTS" : "VEILLE"}
+                    style={{ right: "2.4%", top: "48.5%", width: "25.5%", height: "28%" }} />
+
+      {/* ── Phrase de conversation ── */}
+      {modeVoix && (caption ?? skin.caption) && (
+        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center"
+             style={{ top: "68.5%" }}>
+          <div className="font-space"
+               style={{ fontSize: 19, fontWeight: 300, letterSpacing: ".1em",
+                        color: "#cfeeff", textShadow: "0 0 22px rgba(0,229,255,.5)" }}>
+            {caption ?? skin.caption}
+          </div>
+        </div>
+      )}
+
+      {/* ── Contenu du mode : au centre, entre les cadrans ── */}
       {children && (
-        <main className="pointer-events-none absolute inset-0 z-40">{children}</main>
+        <main className="pointer-events-none absolute"
+              style={{ left: "30.5%", right: "30.5%", top: "7%", bottom: "17%" }}>
+          {children}
+        </main>
       )}
 
-      {/* ── Sélecteur de mode ── */}
-      <RadialMenu
-        items={items}
-        active={active}
-        onSelect={onSelect}
-        color={skin.key}
-        accent={skin.accent}
-      />
-    </div>
+      {/* Orbe de veille — présent dans la maquette, en retrait du dock. */}
+      <div className="pointer-events-none absolute"
+           style={{ right: "14%", bottom: "6.5%", width: 108, height: 108 }}>
+        <ReactorCanvas state={state} live={false} className="h-full w-full" />
+      </div>
+
+      <ModeDock items={items} actif={active} onSelect={onSelect} />
+
+      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-mono"
+           style={{ bottom: "2.2%", fontSize: 9, letterSpacing: ".22em",
+                    color: "rgba(120,170,210,.4)" }}>
+        {footer}
+      </div>
+    </Stage>
   );
 }
