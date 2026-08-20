@@ -15,6 +15,10 @@ import { useTTSStream } from "@/hooks/useTTSStream";
 import { useChat } from "@/hooks/useChat";
 import { usePanic } from "@/hooks/usePanic";
 import { storage, wsToHttp } from "@/lib/utils";
+import {
+  completerDepuisBureau, ecrireDeviceId, ecrireServerUrl, ecrireToken,
+  lireDeviceId, lireServerUrl, lireToken,
+} from "@/lib/credentials";
 import type { EmbeddedViewProps } from "@/components/cockpit/embed";
 
 const STATE_TEXT: Record<SphereState, string> = {
@@ -35,23 +39,17 @@ let auditId = 0;
 
 export function OrionUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }: EmbeddedViewProps = {}) {
   // ─── Config persistée ───
-  const [serverUrl, setServerUrl] = useState(() => {
-    const saved = storage.get("orionServerUrl");
-    if (saved) return saved;
-    if (typeof window !== "undefined" && (location.protocol === "http:" || location.protocol === "https:")) {
-      return `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`;
-    }
-    return "ws://localhost:8765";
-  });
-  const [token, setToken] = useState(() => storage.get("orionToken"));
-  const [deviceId, setDeviceId] = useState(() => storage.get("orionDevice", "browser"));
+  const [serverUrl, setServerUrl] = useState(lireServerUrl);
+  const [token, setToken] = useState(lireToken);
+  const [deviceId, setDeviceId] = useState(() => lireDeviceId("browser"));
   const [settingsOpen, setSettingsOpen] = useState(!token);
   const [enabled, setEnabled] = useState(!!token);
   const [gateOpen, setGateOpen] = useState(true);
 
-  useEffect(() => storage.set("orionServerUrl", serverUrl), [serverUrl]);
-  useEffect(() => storage.set("orionToken", token), [token]);
-  useEffect(() => storage.set("orionDevice", deviceId), [deviceId]);
+  useEffect(() => ecrireServerUrl(serverUrl), [serverUrl]);
+  useEffect(() => ecrireToken(token), [token]);
+  useEffect(() => { completerDepuisBureau().then((ok) => { if (ok) setToken(lireToken()); }); }, []);
+  useEffect(() => ecrireDeviceId(deviceId), [deviceId]);
 
   // ─── Sphere / état UI ───
   const [state, setState] = useState<SphereState>("idle");

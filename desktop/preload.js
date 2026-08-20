@@ -39,4 +39,7 @@ contextBridge.exposeInMainWorld("orionDesktop", {
   modeOverlay: (opts) => ipcRenderer.invoke("orion:mode-overlay", opts),
 
   infos: () => ipcRenderer.invoke("orion:infos"),
+
+  /** Token et URL du serveur, lus dans le .env local. Évite de ressaisir. */
+  identifiants: () => ipcRenderer.invoke("orion:identifiants"),
 });

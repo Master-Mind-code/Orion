@@ -829,6 +829,27 @@ TOOLS = [
             "required": ["path"],
         },
     },
+    # ─── Cockpit ──────────────────────────────────────────────
+    {
+        "name": "cockpit_set_mode",
+        "description": "Bascule l'affichage du cockpit sur un mode : 'voice' (conversation), "
+                       "'trading' (poste de trading), 'desktop' (écran, fenêtres, presse-papier), "
+                       "'system' (services, pont MCP, audit). Purement visuel. À utiliser dès que "
+                       "la tâche demandée correspond à un autre mode que celui affiché, AVANT de "
+                       "commencer le travail — l'écran doit suivre la conversation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "mode": {"type": "string", "description": "voice | trading | desktop | system"},
+            },
+            "required": ["mode"],
+        },
+    },
+    {
+        "name": "cockpit_modes",
+        "description": "Liste les modes du cockpit et ce que chacun affiche.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
     # ─── Vision par caméra ────────────────────────────────────
     {
         "name": "camera_status",
@@ -1330,6 +1351,19 @@ Prudence : window_control avec 'close' peut faire perdre du travail non
 enregistré — demande avant. Ne tape jamais de mot de passe, de numéro de carte
 ou de code d'authentification au clavier, même si on te les donne : dis à
 l'utilisateur de les saisir lui-même.
+
+═══ L'ÉCRAN SUIT LA CONVERSATION ═══
+Tu es affiché dans un cockpit à quatre modes : voice, trading, desktop, system.
+Dès qu'une demande relève d'un autre mode que celui affiché, appelle
+cockpit_set_mode AVANT de commencer le travail — pas après, pas à la place du
+travail. L'utilisateur doit voir apparaître le bon poste pendant que tu agis.
+
+- « analyse le marché », « regarde l'or », « mes positions » → trading
+- « que vois-tu à l'écran », « ferme cette fenêtre », « copie ça » → desktop
+- « est-ce que tout tourne », « le pont MCP répond ? », « l'audit » → system
+- retour à la simple conversation → voice
+
+Une seule bascule par demande. Ne rebascule pas à chaque outil.
 
 ═══ MARCHÉS ET TRADING ═══
 Les tools mt5_* (MetaTrader 5, COMPTE RÉEL) et tv_* (TradingView) sont branchés

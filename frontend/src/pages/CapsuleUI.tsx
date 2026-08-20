@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { ReactorCore } from "@/components/cockpit/ReactorCore";
+import { VideoCore } from "@/components/cockpit/VideoCore";
 import { SKIN, type CockpitState } from "@/lib/cockpit-theme";
 import { pont } from "@/lib/desktop";
 import { serveurEnLigne } from "@/lib/orionApi";
@@ -17,37 +17,41 @@ export function CapsuleUI() {
   const audioLevelRef = useRef(0);
   const skin = SKIN[state];
 
-  // Témoin d'état : la capsule vire à l'alerte quand le serveur Orion ne répond
-  // plus. Un simple ping suffit — ouvrir un WebSocket depuis une fenêtre
-  // toujours affichée doublerait inutilement les connexions du cockpit.
   useEffect(() => {
     let vivant = true;
     const sonder = async () => {
       const ok = await serveurEnLigne();
-      if (vivant) setState(ok ? "idle" : "alert");
+      if (vivant) setState((prev) => (ok ? (prev === "alert" ? "idle" : prev) : "alert"));
     };
     sonder();
     const id = window.setInterval(sonder, 8000);
+
+    // Écoute les mises à jour en direct de la capsule depuis Electron main
+    const p = pont();
+    if (p?.onCapsuleUpdate) {
+      p.onCapsuleUpdate((newState: CockpitState) => {
+        if (vivant && newState) setState(newState);
+      });
+    }
+
     return () => { vivant = false; window.clearInterval(id); };
   }, []);
 
   return (
     <div
       className="relative h-screen w-screen select-none overflow-hidden rounded-full"
-      // La bordure et le fond translucide détachent la capsule du bureau ;
-      // sans eux la fenêtre transparente donne un réacteur qui flotte à nu.
       style={{
-        background: "radial-gradient(circle at 50% 45%, rgba(8,18,38,0.82) 0%, rgba(2,5,12,0.92) 70%, transparent 100%)",
-        border: `1px solid ${skin.key}33`,
+        background: "radial-gradient(circle at 50% 45%, rgba(8,18,38,0.88) 0%, rgba(2,5,12,0.96) 70%, transparent 100%)",
+        border: `1.5px solid ${skin.key}55`,
+        boxShadow: `0 0 35px ${skin.key}44`,
         WebkitAppRegion: "drag",
       } as React.CSSProperties}
     >
-      {/* Le réacteur sans satellites : à 190 px ils seraient illisibles. */}
-      <ReactorCore
+      {/* Le réacteur vidéo holographique d'Orion */}
+      <VideoCore
         state={state}
         audioLevelRef={audioLevelRef}
-        satellites={false}
-        className="h-full w-full"
+        className="h-full w-full p-2"
       />
 
       <button

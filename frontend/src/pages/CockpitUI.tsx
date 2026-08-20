@@ -113,7 +113,8 @@ export function CockpitUI() {
         // se retrouvaient ancres au conteneur au lieu de la fenetre.
         <div className="pointer-events-auto absolute inset-x-0 bottom-[200px] mx-auto
                         w-[min(76vw,900px)] text-center">
-          <VoiceUI embedded onStateChange={handleState} audioLevelRef={audioLevelRef} />
+          <VoiceUI embedded onStateChange={handleState} onModeChange={setMode}
+                   audioLevelRef={audioLevelRef} />
         </div>
       )}
 

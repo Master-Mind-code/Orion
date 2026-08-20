@@ -265,6 +265,40 @@ ipcMain.handle("orion:infos", () => ({
   autostart: app.getLoginItemSettings().openAtLogin,
 }));
 
+/** Lecture minimale du .env d'Orion — pas de dépendance, quelques lignes. */
+function lireEnv() {
+  const fs = require("node:fs");
+  const out = {};
+  try {
+    const fichier = path.join(__dirname, "..", ".env");
+    for (const ligne of fs.readFileSync(fichier, "utf-8").split(/\r?\n/)) {
+      const t = ligne.trim();
+      if (!t || t.startsWith("#")) continue;
+      const i = t.indexOf("=");
+      if (i > 0) out[t.slice(0, i).trim()] = t.slice(i + 1).trim();
+    }
+  } catch {
+    /* pas de .env : l'interface retombera sur la saisie manuelle */
+  }
+  return out;
+}
+
+/** Identifiants de connexion au serveur Orion.
+ *
+ *  L'application de bureau tourne sur la MÊME machine que le serveur et lit
+ *  déjà le disque : lui faire redemander un token que le .env contient juste à
+ *  côté n'ajoute aucune sécurité, seulement de la friction. Depuis un
+ *  navigateur distant ce canal n'existe pas, et la saisie manuelle reste la
+ *  seule voie. */
+ipcMain.handle("orion:identifiants", () => {
+  const env = lireEnv();
+  const port = env.SERVER_PORT || "8765";
+  return {
+    token: env.ORION_SECRET_TOKEN || env.JARVIS_SECRET_TOKEN || "",
+    serverUrl: `ws://localhost:${port}`,
+  };
+});
+
 /* ──────────────────────────── Cycle de vie ─────────────────────────── */
 
 app.whenReady().then(async () => {

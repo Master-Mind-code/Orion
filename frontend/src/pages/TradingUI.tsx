@@ -12,6 +12,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { storage } from "@/lib/utils";
 import type { EmbeddedViewProps } from "@/components/cockpit/embed";
 import { TradingDeck } from "@/components/cockpit/trading/TradingDeck";
+import { completerDepuisBureau, ecrireToken, lireToken } from "@/lib/credentials";
 
 const TOKEN_KEY = "orion_trading_token";
 
@@ -22,16 +23,27 @@ export function TradingUI({ embedded }: EmbeddedViewProps = {}) {
       const params = new URLSearchParams(window.location.search);
       const fromUrl = params.get("token");
       if (fromUrl) {
-        storage.set(TOKEN_KEY, fromUrl);
+        ecrireToken(fromUrl);
         history.replaceState({}, "", window.location.pathname);
         return fromUrl;
       }
     }
-    return storage.get(TOKEN_KEY);
+    // Source unique : le token saisi dans n'importe quelle vue vaut ici aussi.
+    return lireToken();
   });
   const setToken = useCallback((t: string) => {
     setTokenRaw(t);
-    storage.set(TOKEN_KEY, t);
+    ecrireToken(t);
+  }, []);
+
+  // Complète depuis le .env local quand on tourne dans la coque de bureau.
+  useEffect(() => {
+    let vivant = true;
+    completerDepuisBureau().then(() => {
+      const t = lireToken();
+      if (vivant && t) setTokenRaw(t);
+    });
+    return () => { vivant = false; };
   }, []);
 
   const [params, setParams] = useState<TradingParams>({

@@ -33,7 +33,14 @@ interface PontDesktop {
   fenetre: (action: ActionFenetre) => Promise<boolean>;
   capsule: (action?: "montrer" | "cacher" | "basculer") => Promise<boolean>;
   cockpit: (action?: "montrer" | "cacher" | "basculer") => Promise<boolean>;
+  notifier?: (opts: { title?: string; body?: string; icon?: string }) => Promise<boolean>;
+  autostart?: { set: (enabled: boolean) => Promise<boolean>; get: () => Promise<boolean> };
+  capsuleState?: (state: string) => Promise<boolean>;
+  onCapsuleUpdate?: (callback: (state: any) => void) => void;
+  modeOverlay?: (opts: { enabled?: boolean; clickThrough?: boolean }) => Promise<boolean>;
   infos: () => Promise<{ plateforme: string; versionElectron: string; dev: boolean }>;
+  /** Token et URL lus dans le .env local par la coque. */
+  identifiants?: () => Promise<{ token: string; serverUrl: string }>;
 }
 
 declare global {

@@ -12,6 +12,10 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useMicRecorder } from "@/hooks/useMicRecorder";
 import { useTTSStream } from "@/hooks/useTTSStream";
 import { storage, wsToHttp } from "@/lib/utils";
+import {
+  completerDepuisBureau, ecrireDeviceId, ecrireServerUrl, ecrireToken,
+  lireDeviceId, lireServerUrl, lireToken,
+} from "@/lib/credentials";
 import type { EmbeddedViewProps } from "@/components/cockpit/embed";
 
 const STATE_LABELS: Record<SphereState, string> = {
@@ -21,33 +25,47 @@ const STATE_LABELS: Record<SphereState, string> = {
   speaking: "PARLE",
 };
 
-export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }: EmbeddedViewProps = {}) {
+export function VoiceUI({ embedded, onStateChange, onModeChange,
+                         audioLevelRef: hostAudioRef }: EmbeddedViewProps = {}) {
   // ─── Config (persistée) ───
-  const [serverUrl, setServerUrl] = useState(() => {
-    const saved = storage.get("orionVoiceServerUrl");
-    if (saved) return saved;
-    if (typeof window !== "undefined" && (location.protocol === "http:" || location.protocol === "https:")) {
-      return `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`;
-    }
-    return "ws://localhost:8765";
-  });
-  const [token, setToken] = useState(() => storage.get("orionVoiceToken"));
-  const [deviceId, setDeviceId] = useState(() => storage.get("orionVoiceDevice", "voice-browser"));
-  const [settingsOpen, setSettingsOpen] = useState(!token);
-  useEffect(() => storage.set("orionVoiceServerUrl", serverUrl), [serverUrl]);
-  useEffect(() => storage.set("orionVoiceToken", token), [token]);
-  useEffect(() => storage.set("orionVoiceDevice", deviceId), [deviceId]);
+  const [serverUrl, setServerUrl] = useState(lireServerUrl);
+  const [token, setToken] = useState(lireToken);
+  const [deviceId, setDeviceId] = useState(() => lireDeviceId("voice-browser"));
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  useEffect(() => ecrireServerUrl(serverUrl), [serverUrl]);
+  useEffect(() => ecrireToken(token), [token]);
+  useEffect(() => ecrireDeviceId(deviceId), [deviceId]);
 
   // ─── État UI ───
   const [state, setState] = useState<SphereState>("idle");
   useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
-  const [orionText, setOrionText] = useState("Appuie sur le micro pour parler.");
+  const [orionText, setOrionText] = useState(embedded ? "Parle, je t'écoute." : "Appuie sur le micro pour parler.");
   const [userText, setUserText] = useState("");
   const [toolHint, setToolHint] = useState("");
   const [shapeLabel, setShapeLabel] = useState("SPHÈRE");
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(!!token);
+
+  // La coque de bureau lit le .env : on complète ce qui manque puis on se
+  // connecte seul. Sans ça il fallait ressaisir le token à chaque lancement.
+  useEffect(() => {
+    let vivant = true;
+    (async () => {
+      await completerDepuisBureau();
+      if (!vivant) return;
+      const t = lireToken();
+      if (t) {
+        setToken(t);
+        setServerUrl(lireServerUrl());
+        setEnabled(true);
+      } else if (!embedded) {
+        // Hors cockpit, sans token, la saisie manuelle reste la seule voie.
+        setSettingsOpen(true);
+      }
+    })();
+    return () => { vivant = false; };
+  }, [embedded]);
 
   const { toasts, push: toast, dismiss } = useToasts();
   const tts = useTTSStream();
@@ -94,6 +112,12 @@ export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }
     if (data.type === "tool_action") {
       const ok = data.result?.success !== false ? "✓" : "✗";
       setToolHint(`${ok} ${data.tool}`);
+      // Orion pilote l'affichage : il bascule le cockpit sur le mode qui
+      // correspond à ce qu'il s'apprête à faire. On passe par le message
+      // tool_action déjà émis pour chaque outil, sans canal supplémentaire.
+      if (data.tool === "cockpit_set_mode" && data.result?.success && data.result?.mode) {
+        onModeChange?.(String(data.result.mode));
+      }
     } else if (data.type === "response_chunk") {
       handleResponseChunk(data.text || "");
     } else if (data.type === "response") {
@@ -120,7 +144,7 @@ export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }
       const conf = data.confirmed ? " [conf]" : "";
       toast(`${ok}${conf} ${data.tool_name} · ${data.device_id || "?"}`, !data.success);
     }
-  }, [handleResponseChunk, handleResponseFinal, toast]);
+  }, [handleResponseChunk, handleResponseFinal, toast, onModeChange]);
 
   const ws = useWebSocket({ url: wsUrl, onMessage: onWSMessage, enabled });
   const isConnected = ws.status === "open";
@@ -229,6 +253,19 @@ export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleMic, mic]);
 
+  // Dans le cockpit il n'y a plus de bouton micro : on ouvre l'écoute dès que
+  // la connexion est établie. Le navigateur exige un geste utilisateur pour la
+  // PREMIÈRE autorisation du micro ; une fois accordée, elle est mémorisée pour
+  // l'origine et les démarrages suivants sont automatiques.
+  const ecouteAmorcee = useRef(false);
+  useEffect(() => {
+    if (!embedded || !isConnected || ecouteAmorcee.current) return;
+    if (mic.isRecording) return;
+    ecouteAmorcee.current = true;
+    const t = window.setTimeout(() => toggleMic(), 400);
+    return () => window.clearTimeout(t);
+  }, [embedded, isConnected, mic.isRecording, toggleMic]);
+
   // Hint micro
   const micHint = state === "listening"
     ? "J'écoute…"
@@ -306,12 +343,12 @@ export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }
         </div>
       </main>
 
-      <MicButton
+      {!embedded && <MicButton
         isListening={mic.isRecording}
         onClick={toggleMic}
         hint={micHint}
         inline={embedded}
-      />
+      />}
 
       {!embedded && <EnergyBars voiceLevel={voicePct / 100} />}
 
@@ -324,14 +361,14 @@ export function VoiceUI({ embedded, onStateChange, audioLevelRef: hostAudioRef }
         onDeny={onDeny}
       />
 
-      <SettingsPanel
+      {!embedded && <SettingsPanel
         open={settingsOpen}
         serverUrl={serverUrl} setServerUrl={setServerUrl}
         token={token} setToken={setToken}
         deviceId={deviceId} setDeviceId={setDeviceId}
         onConnect={() => { setEnabled(true); setSettingsOpen(false); }}
         onDisconnect={() => { setEnabled(false); ws.close(); }}
-      />
+      />}
     </div>
   );
 }

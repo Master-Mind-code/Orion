@@ -371,6 +371,32 @@ header {
   margin-top: -16px;
 }
 
+/* Core vidéo animé */
+.core-video-element {
+  display: none;
+  width: 320px;
+  height: 320px;
+  object-fit: cover;
+  border-radius: 50%;
+  clip-path: circle(48% at 50% 50%);
+  filter: contrast(1.15) brightness(1.1) drop-shadow(0 0 25px rgba(0,229,255,0.7));
+  box-shadow: 0 0 45px rgba(0,229,255,0.5), inset 0 0 25px rgba(0,229,255,0.4);
+  border: 1.5px solid rgba(0,229,255,0.6);
+  mix-blend-mode: screen;
+  transition: all 0.5s ease;
+  position: relative;
+  z-index: 3;
+  margin-top: -16px;
+}
+.core-video-element.active {
+  display: block;
+  animation: core-pulse 4s ease-in-out infinite;
+}
+@keyframes core-pulse {
+  0%, 100% { transform: scale(1); filter: contrast(1.15) brightness(1.1) drop-shadow(0 0 25px rgba(0,229,255,0.7)); }
+  50% { transform: scale(1.03); filter: contrast(1.2) brightness(1.2) drop-shadow(0 0 35px rgba(0,229,255,0.9)); }
+}
+
 /* État sous la sphère */
 .sphere-footer {
   position: relative;
@@ -1255,7 +1281,8 @@ header {
       <span class="hud-val" id="shapeIndicator">SPHÈRE</span>
     </div>
 
-    <canvas id="sphereCanvas"></canvas>
+    <video id="coreVideo" src="assets/orion_animated_core.mp4" autoplay loop muted playsinline class="core-video-element active"></video>
+    <canvas id="sphereCanvas" style="display:none;"></canvas>
 
     <div class="sphere-footer">
       <div class="sphere-shape-label">Réseau neuronal IA</div>
@@ -1493,9 +1520,9 @@ function shapeAtom(n, r) {
   return pts.slice(0, n);
 }
 
-const SHAPES = ['sphere','star','cube','arcreactor','atom','hub','tore','face','letterD','dominique'];
+const SHAPES = ['core_video','sphere','star','cube','arcreactor','atom','hub','tore','face','letterD','dominique'];
 const SHAPE_LABELS = {
-  sphere:'SPHÈRE', star:'ÉTOILE', cube:'CUBE', arcreactor:'ARC REACTOR',
+  core_video:'CORE ANIMÉ', sphere:'SPHÈRE', star:'ÉTOILE', cube:'CUBE', arcreactor:'ARC REACTOR',
   atom:'ATOME', hub:'HUB NEURONAL', tore:'TORE', face:'VISAGE IA',
   letterD:'LETTRE D', dominique:'DOMINIQUE'
 };

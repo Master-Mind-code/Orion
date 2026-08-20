@@ -15,6 +15,7 @@ from .windows_ctrl import HANDLERS as _WINCTRL_HANDLERS
 from .termux_mobile import HANDLERS as _TERMUX_HANDLERS
 from .vision import HANDLERS as _VISION_HANDLERS
 from .camera_vision import HANDLERS as _CAMERA_HANDLERS
+from .cockpit import HANDLERS as _COCKPIT_HANDLERS
 from .audit_query import HANDLERS as _AUDIT_HANDLERS
 from .trading_tools import HANDLERS as _TRADING_HANDLERS
 from .voice_tools import HANDLERS as _VOICE_HANDLERS
@@ -52,6 +53,7 @@ ALL_HANDLERS = {
     **_TERMUX_HANDLERS,
     **_VISION_HANDLERS,
     **_CAMERA_HANDLERS,
+    **_COCKPIT_HANDLERS,
     **_AUDIT_HANDLERS,
     **_TRADING_HANDLERS,
     **_VOICE_HANDLERS,

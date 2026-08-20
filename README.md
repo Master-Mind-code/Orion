@@ -106,8 +106,21 @@ s'applique qu'au rendu WebGL — le chrome et le texte restent nets.
 Le réacteur reflète l'état réel : au repos, en écoute, en traitement, en parole,
 en alerte.
 
-Routes : `/cockpit`, `/capsule`, plus les vues d'origine `/` (chat texte),
-`/voice` et `/trading`, inchangées.
+## Routes
+
+| Adresse | Vue |
+|---|---|
+| `/` et `/cockpit` | le cockpit — point d'entrée par défaut |
+| `/chat` | ancienne interface de chat texte, avec sa grille de mot de passe |
+| `/voice` · `/trading` | vues d'origine, inchangées |
+| `/capsule` | la capsule flottante (chargée par la coque Electron) |
+
+Les mots de déverrouillage du chat texte se règlent par la variable
+`VITE_ORION_UNLOCK_WORDS` (fichier `.env` du dossier `frontend/`) ou par la clé
+`ORION_UNLOCK_WORDS` du localStorage — ils ne sont plus écrits dans le dépôt.
+Tout ce qui porte le préfixe `VITE_` finit en clair dans le bundle : ces mots
+gardent l'ouverture de l'interface, le vrai contrôle d'accès reste
+`ORION_SECRET_TOKEN` côté serveur.
 
 ---
 

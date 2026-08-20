@@ -20,4 +20,6 @@ export interface EmbeddedViewProps {
   onStateChange?: (state: CockpitState) => void;
   /** Ref de niveau audio fournie par la coque, pour animer le réacteur. */
   audioLevelRef?: MutableRefObject<number>;
+  /** Orion demande lui-même l'affichage d'un autre mode. */
+  onModeChange?: (mode: string) => void;
 }
