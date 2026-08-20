@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { VideoCore } from "@/components/cockpit/VideoCore";
+import { ReactorCore } from "@/components/cockpit/ReactorCore";
 import { SKIN, type CockpitState } from "@/lib/cockpit-theme";
 import { pont } from "@/lib/desktop";
 import { serveurEnLigne } from "@/lib/orionApi";
@@ -47,11 +47,12 @@ export function CapsuleUI() {
         WebkitAppRegion: "drag",
       } as React.CSSProperties}
     >
-      {/* Le réacteur vidéo holographique d'Orion */}
-      <VideoCore
+      {/* Le réacteur 3D d'Orion */}
+      <ReactorCore
         state={state}
         audioLevelRef={audioLevelRef}
-        className="h-full w-full p-2"
+        satellites={false}
+        className="h-full w-full"
       />
 
       <button

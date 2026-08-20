@@ -1,10 +1,11 @@
 /**
- * Cœur "arc reactor" en WebGL — le centre volumétrique du cockpit d'Orion.
+ * Cœur "Arc Reactor / Quantum Core" 3D volumétrique en WebGL (Three.js).
  *
- * Inspiré des références : anneaux concentriques à vitesses et sens opposés,
- * couronne segmentée, arcs brisés, halo diffus. Le bloom est appliqué ici et
- * NULLE PART ailleurs : le chrome du HUD est en SVG par-dessus, pour que le
- * texte et les traits restent nets. Du bloom sur du texte le rend illisible.
+ * Reproduit fidèlement le modèle HUD 3D de la référence :
+ * - Cœur central mécanique 3D (cylindre vannes + modules/cubes quantiques 3D en orbite)
+ * - Anneaux concentriques superposés (Cyan #00e5ff et Ambre/Or #f5c518) à sens de rotation opposés
+ * - Couronnes dentées segmentées, graduations radiale et arcs brisés
+ * - Halo holographique et bloom haute précision
  */
 import { useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -23,7 +24,74 @@ interface CoreProps {
   className?: string;
 }
 
-/** Couronne de petits blocs — la "denture" lumineuse des références. */
+/** Bloc mécanique 3D central avec noyaux lumineux et cubes quantiques orbitaux */
+function QuantumCore({ color, accent, speed }: { color: string; accent: string; speed: number }) {
+  const coreRef = useRef<THREE.Group>(null);
+  const cubeGroupRef = useRef<THREE.Group>(null);
+
+  // 6 blocs/cubes méca 3D en orbite autour du réacteur central
+  const modules = useMemo(() => {
+    return [
+      { pos: [0.34, 0.22, 0.15], rot: [0.4, 0.2, 0.1], scale: 0.14 },
+      { pos: [-0.36, -0.18, 0.18], rot: [-0.2, 0.5, 0.3], scale: 0.13 },
+      { pos: [-0.24, 0.34, -0.12], rot: [0.1, -0.4, 0.2], scale: 0.13 },
+      { pos: [0.30, -0.28, -0.15], rot: [0.5, 0.1, -0.3], scale: 0.12 },
+      { pos: [0.08, 0.42, 0.08], rot: [0.2, 0.3, 0.1], scale: 0.11 },
+      { pos: [-0.08, -0.42, -0.08], rot: [-0.3, -0.1, 0.4], scale: 0.11 },
+    ];
+  }, []);
+
+  useFrame((_, dt) => {
+    if (coreRef.current) {
+      coreRef.current.rotation.y += speed * dt * 1.2;
+      coreRef.current.rotation.z += speed * dt * 0.5;
+    }
+    if (cubeGroupRef.current) {
+      cubeGroupRef.current.rotation.y -= speed * dt * 0.9;
+      cubeGroupRef.current.rotation.x += speed * dt * 0.4;
+    }
+  });
+
+  return (
+    <group ref={coreRef}>
+      {/* Cylindre central métallique du réacteur */}
+      <mesh>
+        <cylinderGeometry args={[0.18, 0.18, 0.38, 16]} />
+        <meshStandardMaterial color="#040c1a" roughness={0.2} metalness={0.9} wireframe toneMapped={false} />
+      </mesh>
+      {/* Cœur cylindrique d'énergie interne glowing */}
+      <mesh>
+        <cylinderGeometry args={[0.13, 0.13, 0.34, 16]} />
+        <meshBasicMaterial color={color} transparent opacity={0.88} toneMapped={false} />
+      </mesh>
+
+      {/* Ensemble de cubes quantiques 3D en rotation */}
+      <group ref={cubeGroupRef}>
+        {modules.map((m, i) => (
+          <group key={i} position={m.pos as [number, number, number]} rotation={m.rot as [number, number, number]}>
+            {/* Structure du cube plein */}
+            <mesh>
+              <boxGeometry args={[m.scale, m.scale, m.scale]} />
+              <meshStandardMaterial color="#061224" roughness={0.25} metalness={0.85} />
+            </mesh>
+            {/* Arêtes lumineuses glowing wireframe */}
+            <lineSegments>
+              <edgesGeometry args={[new THREE.BoxGeometry(m.scale * 1.04, m.scale * 1.04, m.scale * 1.04)]} />
+              <lineBasicMaterial color={i % 2 === 0 ? color : accent} transparent opacity={0.95} toneMapped={false} />
+            </lineSegments>
+            {/* Cœur lumineux interne du cube */}
+            <mesh>
+              <boxGeometry args={[m.scale * 0.48, m.scale * 0.48, m.scale * 0.48]} />
+              <meshBasicMaterial color={i % 2 === 0 ? color : accent} toneMapped={false} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+/** Couronne de petits blocs — la denture lumineuse du cadran */
 function SegmentedRing({
   radius, count, color, speed, thickness = 0.05, height = 0.16, opacity = 1,
 }: {
@@ -32,11 +100,6 @@ function SegmentedRing({
 }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-
-  useMemo(() => {
-    // Placement figé : seul le groupe tourne, pas chaque instance.
-    if (!mesh.current) return;
-  }, []);
 
   useFrame((_, dt) => {
     const m = mesh.current;
@@ -60,7 +123,7 @@ function SegmentedRing({
   );
 }
 
-/** Anneau plein ou arc partiel. `arc` en fraction de tour (1 = cercle entier). */
+/** Anneau plein ou arc partiel. `arc` en fraction de tour (1 = cercle entier) */
 function ArcRing({
   radius, tube = 0.012, color, speed, arc = 1, offset = 0, opacity = 1,
 }: {
@@ -79,7 +142,7 @@ function ArcRing({
   );
 }
 
-/** Traits radiaux fins, comme les graduations des cadrans de référence. */
+/** Traits radiaux fins (graduations du cadran) */
 function TickRing({ radius, count, len, color, speed, opacity = 0.7 }: {
   radius: number; count: number; len: number; color: string;
   speed: number; opacity?: number;
@@ -119,8 +182,6 @@ function Assembly({ state, audioLevelRef }: { state: CockpitState; audioLevelRef
   useFrame((_, dt) => {
     t.current += dt;
     const level = audioLevelRef?.current ?? 0;
-    // Respiration lente + réaction au son. Le max évite que le cœur
-    // disparaisse quand le micro est muet.
     const pulse = 1 + Math.sin(t.current * 1.6) * 0.035 + level * 0.28;
     if (core.current) core.current.scale.setScalar(pulse);
     if (halo.current) {
@@ -128,73 +189,64 @@ function Assembly({ state, audioLevelRef }: { state: CockpitState; audioLevelRef
       (halo.current.material as THREE.MeshBasicMaterial).opacity = 0.1 + level * 0.22;
     }
     if (root.current) {
-      // Léger balancement : donne le volume sans désorienter.
-      root.current.rotation.y = Math.sin(t.current * 0.35) * 0.13;
-      root.current.rotation.x = -0.22 + Math.cos(t.current * 0.28) * 0.05;
+      // Inclinaison 3D caractéristique du cockpit (vue isométrique 3D)
+      root.current.rotation.x = -0.36 + Math.cos(t.current * 0.28) * 0.04;
+      root.current.rotation.y = Math.sin(t.current * 0.35) * 0.12;
     }
   });
 
   const s = skin.spin;
+  const cyanColor = skin.key; // Cyan #00e5ff
+  const amberColor = skin.accent; // Ambre/Or #f5c518
+
   return (
     <group ref={root}>
-      {/* Halo, repoussé loin derrière et resserré : large et proche, il remplissait
-          tout l'intérieur d'un aplat et écrasait la structure du noyau. */}
+      {/* Halo de lueur diffuse arrière */}
       <mesh ref={halo} position={[0, 0, -0.9]}>
-        <circleGeometry args={[0.5, 48]} />
-        <meshBasicMaterial color={skin.key} transparent opacity={0.1} toneMapped={false} />
+        <circleGeometry args={[0.55, 48]} />
+        <meshBasicMaterial color={cyanColor} transparent opacity={0.12} toneMapped={false} />
       </mesh>
 
-      {/* Puits central opaque : c'est lui qui creuse le cœur en masquant le halo.
-          Presque noir plutôt que transparent, sinon le halo transparaît. */}
+      {/* Puits central opaque */}
       <mesh position={[0, 0, -0.02]}>
         <circleGeometry args={[0.58, 48]} />
         <meshBasicMaterial color="#020509" toneMapped={false} />
       </mesh>
 
-      {/* Noyau évidé : une lèvre lumineuse et quatre anneaux internes fins. */}
+      {/* Cœur mécanique 3D central et cubes quantiques */}
       <group ref={core}>
-        <mesh>
-          <torusGeometry args={[0.56, 0.016, 8, 96]} />
-          <meshBasicMaterial color={skin.key} toneMapped={false} />
-        </mesh>
-        {[0.19, 0.28, 0.38, 0.47].map((r, i) => (
-          <mesh key={r}>
-            <torusGeometry args={[r, 0.0045, 6, 72]} />
-            <meshBasicMaterial
-              color={i === 1 ? skin.accent : skin.key}
-              transparent
-              opacity={0.28 + i * 0.14}
-              toneMapped={false}
-            />
-          </mesh>
-        ))}
-        {/* Point de mire : sans lui le centre paraît creux au sens de « vide ». */}
-        <mesh>
-          <circleGeometry args={[0.055, 24]} />
-          <meshBasicMaterial color={skin.key} toneMapped={false} />
-        </mesh>
+        <QuantumCore color={cyanColor} accent={amberColor} speed={s * 1.5} />
       </group>
 
-      {/* Couronnes segmentées, sens opposés */}
-      <SegmentedRing radius={0.62} count={48} color={skin.key} speed={s * 2.2} height={0.1} />
-      <SegmentedRing radius={0.95} count={36} color={skin.key} speed={-s * 1.4} height={0.17} opacity={0.85} />
-      <SegmentedRing radius={1.6} count={72} color={skin.accent} speed={s * 0.8} thickness={0.03} height={0.08} opacity={0.6} />
+      {/* Anneaux intérieurs cyan et ambre */}
+      <mesh>
+        <torusGeometry args={[0.56, 0.016, 8, 96]} />
+        <meshBasicMaterial color={cyanColor} toneMapped={false} />
+      </mesh>
 
-      {/* Arcs brisés : le détail qui fait "machine" plutôt que "cercle" */}
-      <ArcRing radius={1.2} color={skin.key} speed={-s * 1.9} arc={0.28} offset={0.4} tube={0.022} />
-      <ArcRing radius={1.2} color={skin.key} speed={-s * 1.9} arc={0.16} offset={3.1} tube={0.022} />
-      <ArcRing radius={1.33} color={skin.accent} speed={s * 2.6} arc={0.4} tube={0.014} opacity={0.9} />
-      <ArcRing radius={1.75} color={skin.key} speed={-s * 0.6} arc={1} tube={0.006} opacity={0.45} />
-      <ArcRing radius={2.05} color={skin.accent} speed={s * 1.1} arc={0.12} tube={0.03} />
+      {/* Anneau Ambre/Gold intermédiaire concentrique (focalisation visuelle) */}
+      <ArcRing radius={0.82} color={amberColor} speed={s * 1.8} arc={0.75} tube={0.018} opacity={0.9} />
+      <ArcRing radius={0.88} color={amberColor} speed={-s * 1.2} arc={0.45} tube={0.012} opacity={0.8} />
 
-      <TickRing radius={1.9} count={60} len={0.1} color={skin.key} speed={-s * 0.35} />
-      <TickRing radius={2.3} count={90} len={0.06} color={skin.key} speed={s * 0.22} opacity={0.4} />
+      {/* Couronnes segmentées cyan et ambre à vitesses opposées */}
+      <SegmentedRing radius={0.68} count={48} color={cyanColor} speed={s * 2.2} height={0.1} />
+      <SegmentedRing radius={1.02} count={36} color={amberColor} speed={-s * 1.4} height={0.17} opacity={0.9} />
+      <SegmentedRing radius={1.55} count={72} color={cyanColor} speed={s * 0.8} thickness={0.03} height={0.08} opacity={0.7} />
+
+      {/* Arcs brisés et détails HUD */}
+      <ArcRing radius={1.22} color={cyanColor} speed={-s * 1.9} arc={0.28} offset={0.4} tube={0.022} />
+      <ArcRing radius={1.22} color={amberColor} speed={-s * 1.9} arc={0.16} offset={3.1} tube={0.022} />
+      <ArcRing radius={1.38} color={cyanColor} speed={s * 2.6} arc={0.4} tube={0.014} opacity={0.9} />
+      <ArcRing radius={1.78} color={amberColor} speed={-s * 0.6} arc={1} tube={0.006} opacity={0.5} />
+      <ArcRing radius={2.08} color={cyanColor} speed={s * 1.1} arc={0.12} tube={0.03} />
+
+      {/* Graduations radiale HUD */}
+      <TickRing radius={1.92} count={60} len={0.1} color={cyanColor} speed={-s * 0.35} />
+      <TickRing radius={2.32} count={90} len={0.06} color={amberColor} speed={s * 0.22} opacity={0.45} />
     </group>
   );
 }
 
-/** Satellites sortis du groupe principal : ils ne doivent PAS suivre le
- *  balancement du cœur, sinon tout bouge d'un bloc et la profondeur disparaît. */
 function Orbit({ state, audioLevelRef }: {
   state: CockpitState; audioLevelRef?: React.MutableRefObject<number>;
 }) {
@@ -216,7 +268,6 @@ export function ReactorCore({
         <Assembly state={state} audioLevelRef={audioLevelRef} />
         {satellites && <Orbit state={state} audioLevelRef={audioLevelRef} />}
         <EffectComposer>
-          {/* mipmapBlur donne un halo large et doux plutôt qu'un contour dur. */}
           <Bloom intensity={skin.glow} luminanceThreshold={0.15} luminanceSmoothing={0.6} mipmapBlur />
         </EffectComposer>
       </Canvas>

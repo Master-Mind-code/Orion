@@ -17,7 +17,7 @@ import { Minus, Pin, Square, X } from "lucide-react";
 import { CK, SKIN, type CockpitState } from "@/lib/cockpit-theme";
 import { agirFenetre, basculerCapsule, estBureau } from "@/lib/desktop";
 import { CockpitFrame } from "./CockpitFrame";
-import { VideoCore } from "./VideoCore";
+import { ReactorCore } from "./ReactorCore";
 import { RadialMenu, type RadialItem } from "./RadialMenu";
 
 interface ShellProps {
@@ -101,7 +101,7 @@ export function CockpitShell({
         className="absolute inset-x-0 top-0 z-10 transition-transform duration-500"
         style={{ bottom: 168, transform: `scale(${coreScale})` }}
       >
-        <VideoCore state={state} audioLevelRef={audioLevelRef} className="h-full w-full" />
+        <ReactorCore state={state} audioLevelRef={audioLevelRef} className="h-full w-full" />
       </div>
 
       {/* ── Châssis ── */}
