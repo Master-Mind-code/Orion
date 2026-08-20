@@ -21,6 +21,7 @@ from server.trading.trade_manager import (
     update_open_trades, get_open_trades, get_history,
     push_command, pop_command, compute_stats,
     get_trading_state, set_trading_state, add_to_history,
+    validate_order_risk,
 )
 
 router = APIRouter(prefix="/api")
@@ -129,6 +130,10 @@ async def run_analysis(market_data: dict, state: dict):
                 "tp":     decision.get("tp1"),
                 "comment": f"ORION|{decision.get('strategy','')}|{decision.get('confidence',0)}%",
             }
+            valide, motif, pct = validate_order_risk(cmd)
+            if not valide:
+                print(f"[ORION TRADING] {motif}")
+                return
             push_command(cmd)
             await broadcast_dashboard({
                 "type": "trade_signal",
@@ -160,9 +165,16 @@ async def trade_confirm(request: Request, token: str = Depends(trading_token)):
     if data.get("executed"):
         await broadcast_dashboard({"type": "trade_executed", "data": data})
 
-    # Si l'EA notifie une fermeture avec P&L → archiver dans l'historique
+    # Si l'EA notifie une fermeture avec P&L → archiver dans l'historique + journal Obsidian
     if data.get("closed") and data.get("ticket"):
         add_to_history(data)
+
+    if data.get("executed") or data.get("closed"):
+        try:
+            from server.trading.journal import log_trade_journal
+            log_trade_journal(data)
+        except Exception as exc:
+            print(f"[JOURNAL!] Erreur écriture journal : {exc}")
 
     return {"status": "ok"}
 
@@ -205,8 +217,11 @@ async def close_all(token: str = Depends(trading_token)):
 async def manual_trade(request: Request, token: str = Depends(trading_token)):
     check_token(token)
     cmd = await request.json()
+    valide, motif, pct = validate_order_risk(cmd)
+    if not valide:
+        raise HTTPException(status_code=400, detail=motif)
     push_command(cmd)
-    return {"status": "queued", "command": cmd}
+    return {"status": "queued", "command": cmd, "risk_validated": True, "risk_pct": pct}
 
 
 # ─────────────────────────────────────────────────────────────────

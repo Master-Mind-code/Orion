@@ -571,6 +571,14 @@ def _make_silent_wav(seconds: int = 1, sample_rate: int = 16000) -> bytes:
 # MAIN
 # ═══════════════════════════════════════════════════════════════════════
 
+def test_mcp_bridge_smoke(r: Runner):
+    def check_mcp():
+        from tests.test_mcp_bridge import run_all_tests
+        run_all_tests()
+        return "schema, status & tools OK"
+    r.test("Pont MCP & Diagnostiques", check_mcp)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-network", action="store_true", help="skip web et endpoints serveur")
@@ -595,6 +603,7 @@ def main():
         test_screenshot(r)
         test_documents(r)
         test_memory(r)
+        test_mcp_bridge_smoke(r)
         test_image_gen(r, enabled=args.image_gen)
         test_presets(r)
         if not args.no_network:

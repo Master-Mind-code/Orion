@@ -7,6 +7,7 @@ import subprocess
 import platform
 import shutil
 import os
+import shlex
 
 
 def _is_android() -> bool:
@@ -180,9 +181,19 @@ def open_app(app_name: str) -> dict:
     for category, commands in aliases.items():
         if app_lower in category or app_lower in " ".join(commands).lower():
             for cmd in commands:
-                if shutil.which(cmd.split()[0]):
-                    subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    return {"success": True, "message": f"Ouvert : {cmd}"}
+                parts = shlex.split(cmd)
+                if not parts:
+                    continue
+                exe = parts[0]
+                if shutil.which(exe) or exe.lower() == "start":
+                    try:
+                        if os_name == "windows" and exe.lower() == "start" and len(parts) > 1:
+                            os.startfile(parts[1])
+                        else:
+                            subprocess.Popen(parts, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        return {"success": True, "message": f"Ouvert : {cmd}"}
+                    except Exception:
+                        pass
 
     # Tentative directe selon l'OS
     try:

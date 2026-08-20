@@ -274,6 +274,19 @@ TOOLS = [
             "required": ["title"],
         },
     },
+    {
+        "name": "notify_telegram",
+        "description": "Envoie une notification mobile via Telegram (message texte et/ou photo). "
+                       "Permet d'envoyer des alertes mobiles pour tout Orion.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "Texte ou légende du message"},
+                "photo_path": {"type": "string", "description": "Chemin optionnel d'une photo/image à joindre"},
+            },
+            "required": ["message"],
+        },
+    },
     # ─── Capture d'écran ──────────────────────────────────────
     {
         "name": "screenshot",
@@ -859,6 +872,62 @@ TOOLS = [
         "input_schema": {"type": "object", "properties": {}},
     },
     {
+        "name": "camera_watch",
+        "description": "Observe la scène devant la caméra pendant N secondes et résume les événements aperçus "
+                       "(objets, personnes identifiées, mouvements, timeline). "
+                       "Nécessite ORION_CAMERA_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "duree": {"type": "number", "description": "Durée d'observation en secondes (1-30)", "default": 5.0},
+                "interval": {"type": "number", "description": "Intervalle de capture en secondes", "default": 1.0},
+            },
+        },
+    },
+    {
+        "name": "camera_read_document",
+        "description": "Photographie une facture, un reçu ou un document devant la caméra et en extrait "
+                       "des données structurées JSON (fournisseur, date, total, TVA, articles) pour HAM-COMPTA. "
+                       "Nécessite ORION_CAMERA_ENABLED=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "doc_type": {"type": "string", "description": "Type de document (facture, recu, auto)", "default": "auto"},
+                "prompt_extra": {"type": "string", "description": "Consigne spécifique supplémentaire"},
+                "save_path": {"type": "string", "description": "Chemin de sauvegarde optionnel pour l'image"},
+            },
+        },
+    },
+    {
+        "name": "face_enroll",
+        "description": "Enregistre un nouveau visage connu sous un nom donné pour la reconnaissance faciale locale "
+                       "(biométrie 100% locale stockée dans data/known_faces/). Pris depuis la caméra ou un fichier image.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nom ou prénom de la personne (ex: 'alice')"},
+                "image_path": {"type": "string", "description": "Chemin optionnel d'une photo (sinon utilise la caméra)"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "face_list",
+        "description": "Liste les personnes dont le visage est enregistré dans la base biométrique locale.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "face_delete",
+        "description": "Supprime les données biométriques locales enregistrées pour une personne.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nom de la personne à supprimer"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
         "name": "vision_app_start",
         "description": "Lance une application de vision dans sa propre fenêtre : 'detection' "
                        "(mains/visages/objets), 'drowsiness' (somnolence et distraction du "
@@ -883,6 +952,270 @@ TOOLS = [
             "properties": {"app": {"type": "string", "description": "Omettre pour tout arrêter"}},
         },
     },
+    # ─── Tools Trading ─────────────────────────────────────────
+    {
+        "name": "trading_alert_create",
+        "description": "Crée une alerte de niveau de prix (TradingView ou locale). "
+                       "Déclenche un avertissement quand le prix franchit la limite.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbole (ex: 'XAUUSD', 'EURUSD')"},
+                "price": {"type": "number", "description": "Niveau de prix à surveiller"},
+                "message": {"type": "string", "description": "Message ou note d'alerte"},
+                "condition": {"type": "string", "description": "crosses | crosses_above | crosses_below", "default": "crosses"},
+            },
+            "required": ["symbol", "price"],
+        },
+    },
+    {
+        "name": "trading_alert_list",
+        "description": "Liste les alertes de niveaux de prix actives.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "trading_alert_delete",
+        "description": "Supprime une alerte de niveau de prix par son ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "alert_id": {"type": "string", "description": "ID de l'alerte à supprimer"},
+            },
+            "required": ["alert_id"],
+        },
+    },
+    {
+        "name": "trading_session_report",
+        "description": "Génère le bilan synthétique de la session de trading du jour (PnL, RR moyen, winrate) "
+                       "et peut le pousser directement sur Telegram.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "push_telegram": {"type": "boolean", "description": "Envoyer aussi la notif sur Telegram", "default": True},
+            },
+        },
+    },
+    {
+        "name": "trading_check_risk",
+        "description": "Simule et calcule le pourcentage de risque d'un ordre avant exécution (garde-fou).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbole (ex: 'XAUUSD')"},
+                "action": {"type": "string", "description": "BUY | SELL"},
+                "entry": {"type": "number", "description": "Prix d'entrée"},
+                "sl": {"type": "number", "description": "Stop Loss"},
+                "volume": {"type": "number", "description": "Volume en lots", "default": 0.01},
+                "account_balance": {"type": "number", "default": 10000.0},
+            },
+            "required": ["symbol", "action", "entry", "sl"],
+        },
+    },
+    {
+        "name": "trading_backtest_start",
+        "description": "Démarre une session de backtest guidé / Replay TradingView sur un symbole.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "default": "XAUUSD"},
+                "timeframe": {"type": "string", "default": "1h"},
+                "start_time": {"type": "string", "description": "Date/Heure de début (ISO)"},
+            },
+        },
+    },
+    {
+        "name": "trading_backtest_step",
+        "description": "Avance la simulation de backtest d'un ou plusieurs pas (chandelles).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "steps": {"type": "integer", "description": "Nombre de bougies à avancer", "default": 1},
+            },
+        },
+    },
+    {
+        "name": "trading_backtest_results",
+        "description": "Récupère les métriques de performance globales d'une stratégie de backtest.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    # ─── Tools Bureau / Desktop ───────────────────────────────
+    {
+        "name": "screen_ocr",
+        "description": "OCR de l'écran ou d'une fenêtre ('lis-moi cette erreur'). Extrai le texte "
+                       "visible à l'écran via Tesseract local ou le modèle de vision d'Orion.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "region": {
+                    "type": "object",
+                    "properties": {
+                        "x": {"type": "integer"},
+                        "y": {"type": "integer"},
+                        "width": {"type": "integer"},
+                        "height": {"type": "integer"},
+                    },
+                    "description": "Zone spécifique (optionnel)",
+                },
+                "monitor": {"type": "integer", "default": 0},
+                "title_contains": {"type": "string", "description": "Nom de la fenêtre à lire (optionnel)"},
+                "prompt": {"type": "string", "default": "Lis et retranscris tout le texte visible sur cette image."},
+            },
+        },
+    },
+    {
+        "name": "window_watch",
+        "description": "Surveille une fenêtre en arrière-plan ('préviens-moi quand ce téléchargement finit') "
+                       "et émet une notification dès que la condition est remplie.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title_contains": {"type": "string", "description": "Titre ou fragment de la fenêtre à surveiller"},
+                "condition": {"type": "string", "description": "closed | title_changed | text_appeared | text_disappeared", "default": "closed"},
+                "target_text": {"type": "string", "description": "Texte cible pour text_appeared/disappeared"},
+                "timeout_sec": {"type": "integer", "description": "Timeout en secondes", "default": 300},
+            },
+            "required": ["title_contains"],
+        },
+    },
+    {
+        "name": "clipboard_history_get",
+        "description": "Consulte l'historique des 50 derniers contenus textes du presse-papier. "
+                       "Permet de rechercher un texte précédemment copié.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "default": 20},
+                "search": {"type": "string", "description": "Filtre de recherche par mot-clé (optionnel)"},
+            },
+        },
+    },
+    {
+        "name": "clipboard_history_clear",
+        "description": "Efface l'historique du presse-papier.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "macro_record_start",
+        "description": "Démarre l'enregistrement d'une séquence macro (actions souris/clavier).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nom de la macro"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "macro_record_stop",
+        "description": "Arrête et sauvegarde la macro actuellement en cours d'enregistrement.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "macro_action_add",
+        "description": "Ajoute une action (clic, frappe, délai) à la macro en cours.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action_type": {"type": "string", "description": "mouse_click | mouse_move | keyboard_type | keyboard_key | delay"},
+                "params": {"type": "object"},
+            },
+            "required": ["action_type"],
+        },
+    },
+    {
+        "name": "macro_play",
+        "description": "Rejoue une macro enregistrée par son nom à la vitesse spécifiée.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nom de la macro à rejouer"},
+                "speed": {"type": "number", "description": "Facteur de vitesse (1.0 = normal, 2.0 = rapide)", "default": 1.0},
+                "repetitions": {"type": "integer", "description": "Nombre de répétitions", "default": 1},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "macro_list",
+        "description": "Liste les macros enregistrées disponibles.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "macro_delete",
+        "description": "Supprime une macro enregistrée.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nom de la macro à supprimer"},
+            },
+            "required": ["name"],
+        },
+    },
+    # ─── Tools Voix & Réunions ───────────────────────────────
+    {
+        "name": "voice_dictate_obsidian",
+        "description": "Enregistre une dictée vocale ('Orion, note que...') sous forme de note "
+                       "datée et mise en forme dans le coffre Obsidian.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Contenu de la dictée à consigner"},
+                "title": {"type": "string", "description": "Titre explicite de la note (optionnel)"},
+                "category": {"type": "string", "description": "Sous-dossier dans Obsidian", "default": "Notes"},
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "meeting_summarize",
+        "description": "Transcrit et résume un fichier de réunion/appel (.txt, .md, .mp3, .wav, .m4a). "
+                       "Extrai les points clés, décisions et plan d'action (TODOS) dans une note Obsidian.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Chemin absolu ou relatif vers le fichier de réunion"},
+                "title": {"type": "string", "description": "Titre du compte-rendu (optionnel)"},
+                "push_telegram": {"type": "boolean", "description": "Envoyer le résumé synthétique sur Telegram", "default": False},
+                "push_obsidian": {"type": "boolean", "default": True},
+            },
+            "required": ["file_path"],
+        },
+    },
+    # ─── Tools Cerveau et Mémoire ────────────────────────────
+    {
+        "name": "vault_reindex_now",
+        "description": "Déclenche immédiatement la réindexation automatique des fichiers du coffre Obsidian "
+                       "dans la mémoire RAG d'Orion.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "vault_reindex_status",
+        "description": "Consulte l'état du service de réindexation automatique du coffre Obsidian.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "journal_generate_daily",
+        "description": "Génère et consigne la note de journal de bord rétrospective de la journée "
+                       "dans le coffre Obsidian (résumé d'audit, actions et opérations).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "today_only": {"type": "boolean", "default": True},
+            },
+        },
+    },
+    {
+        "name": "episodic_query",
+        "description": "Interroge la mémoire épisodique d'Orion ('qu'est-ce qu'on a fait la semaine dernière ?') "
+                       "en analysant la chronologie des opérations, journaux de bord et souvenirs RAG.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Question ou sujet recherché dans la mémoire épisodique"},
+                "days_back": {"type": "integer", "description": "Nombre de jours dans le passé à analyser", "default": 7},
+            },
+        },
+    },
     # ─── Pont MCP ─────────────────────────────────────────────
     {
         "name": "mcp_status",
@@ -902,13 +1235,16 @@ _DEVICE_BOUND_TOOLS = {
     "move_file", "run_shell_command", "run_python_script", "get_system_info",
     "open_app", "open_url_in_browser", "list_running_processes",
     # Nouveaux device-bound
-    "notify", "screenshot", "list_monitors", "read_pdf", "read_docx",
+    "notify", "notify_telegram", "screenshot", "list_monitors", "read_pdf", "read_docx",
     "mouse_position", "mouse_move", "mouse_click", "keyboard_type", "keyboard_press",
     "automation_status", "mouse_drag", "mouse_scroll", "keyboard_key",
-    "clipboard_get", "clipboard_set",
-    "list_windows", "focus_window", "window_control",
+    "clipboard_get", "clipboard_set", "clipboard_history_get", "clipboard_history_clear",
+    "list_windows", "focus_window", "window_control", "window_watch",
+    "screen_ocr", "macro_record_start", "macro_record_stop", "macro_action_add", "macro_play", "macro_list", "macro_delete",
     "camera_status", "camera_look", "camera_snapshot", "camera_gesture",
+    "camera_watch", "camera_read_document", "face_enroll", "face_list", "face_delete",
     "vision_app_start", "vision_app_stop",
+    "voice_dictate_obsidian", "meeting_summarize",
     # Tools Termux : ne s'exécutent QUE sur worker Android
     "termux_battery", "termux_location", "termux_send_sms", "termux_list_sms",
     "termux_contacts", "termux_call", "termux_vibrate", "termux_notification",

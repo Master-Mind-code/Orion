@@ -13,6 +13,7 @@ import os
 import json
 import uuid
 import asyncio
+from datetime import datetime
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -80,6 +81,12 @@ async def _on_startup():
     app.state.main_loop = asyncio.get_running_loop()
     setup_default_jobs()
     SCHEDULER.start()
+
+    try:
+        from server.memory.auto_indexer import start_vault_watcher
+        start_vault_watcher(interval_sec=30.0)
+    except Exception as exc:
+        print(f"[startup!] Erreur auto_indexer: {exc}")
 
     # Callback pour pousser les demandes de confirmation au client WebSocket
     def _push_confirm(device_id: str, payload: dict) -> bool:
@@ -361,6 +368,47 @@ async def api_panic_release(token: str | None = None):
     )
     await _broadcast_panic({"active": False})
     return state
+
+
+async def broadcast_surveillance_alert(event_data: dict):
+    """Broadcast une alerte de surveillance à toutes les UI connectées."""
+    payload = {
+        "type": "surveillance_alert",
+        "timestamp": event_data.get("timestamp"),
+        "count": event_data.get("count", 1),
+        "message": event_data.get("message", "Intrusion détectée"),
+        "image_path": event_data.get("image_path"),
+        "persons": event_data.get("persons", []),
+    }
+    for did, sess in list(controllers.items()):
+        ws = sess.get("ws")
+        if ws is None:
+            continue
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            pass
+
+
+@app.post("/api/surveillance_event")
+async def api_surveillance_event(payload: dict):
+    """Reçoit un événement d'intrusion depuis surveillance.py et le diffuse en WebSocket."""
+    timestamp = payload.get("timestamp") or datetime.now().strftime("%Hh%M")
+    count = payload.get("count", 1)
+    persons = payload.get("persons", [])
+    persons_str = f" ({', '.join(persons)})" if persons else ""
+    msg = payload.get("message") or f"🚨 Quelqu'un est entré à {timestamp}{persons_str}"
+
+    event_data = {
+        "timestamp": timestamp,
+        "count": count,
+        "message": msg,
+        "image_path": payload.get("image_path"),
+        "persons": persons,
+    }
+    print(f"[SURVEILLANCE EVENT] {msg}")
+    await broadcast_surveillance_alert(event_data)
+    return {"success": True, "broadcasted": len(controllers)}
 
 
 # ─────────────────────────────────────────────────────────────────

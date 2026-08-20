@@ -13,14 +13,44 @@ Commandes clavier :
     ÉCHAP -> quitter
 """
 
+import sys
+import os
+import json
 import time
+import threading
 
 import cv2
+import httpx
 import mediapipe as mp
 
 from server.vision.core.camera import ouvrir_camera, FluxVideo, nouveau_fichier_capture
 from server.vision.core.objects import creer_detecteur_objets, libelle_objet
 from server.vision.alerts import AlerteTelegram
+
+
+def notifier_serveur_orion(chemin_capture, nb_personnes, visages_connus=None):
+    """Envoie un événement d'intrusion au serveur Orion WebSocket via POST /api/surveillance_event."""
+    def _envoi():
+        host = os.environ.get("SERVER_HOST", "127.0.0.1")
+        port = os.environ.get("SERVER_PORT", "8765")
+        if host in ("0.0.0.0", "::"):
+            host = "127.0.0.1"
+        url = f"http://{host}:{port}/api/surveillance_event"
+        horodatage = time.strftime("%Hh%M")
+        personnes_label = visages_connus if visages_connus else []
+        payload = {
+            "timestamp": horodatage,
+            "count": nb_personnes,
+            "image_path": str(chemin_capture) if chemin_capture else None,
+            "persons": personnes_label,
+            "message": f"🚨 Intrusion détectée à {horodatage} ({nb_personnes} personne(s))",
+        }
+        try:
+            httpx.post(url, json=payload, timeout=3.0)
+        except Exception:
+            pass
+
+    threading.Thread(target=_envoi, daemon=True).start()
 
 # --------------------------------------------------------------------------- #
 #  Configuration                                                            #
@@ -120,7 +150,7 @@ def main():
         if intrusion:
             cv2.rectangle(img, (0, 0), (w - 1, h - 1), (0, 0, 255), 8)
 
-        # --- Alerte : photo annotée sur Telegram + capture locale (anti-spam) ---
+        # --- Alerte : photo annotée sur Telegram + capture locale (anti-spam) + serveur Orion ---
         if intrusion:
             legende = f"🚨 INTRUS détecté ({nb_personnes} personne(s)) !"
             notifieur.envoyer_photo(img, legende, cle="intrus")
@@ -129,6 +159,7 @@ def main():
                 cv2.imwrite(chemin, img)
                 derniere_capture = maintenant
                 print(f"[INTRUS] Capture enregistrée : {chemin}", flush=True)
+                notifier_serveur_orion(chemin, nb_personnes)
 
         fps = 1 / (maintenant - temps_precedent) if maintenant != temps_precedent else 0
         temps_precedent = maintenant

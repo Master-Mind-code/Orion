@@ -103,7 +103,7 @@ class VoiceConfig:
 
     @classmethod
     def from_env(cls) -> "VoiceConfig":
-        default_device = f"voice-{platform.node().lower()}"
+        default_device = "voice_master"
         return cls(
             server_url=get_env("SERVER_URL", "ws://localhost:8765") or "ws://localhost:8765",
             secret_token=get_env("SECRET_TOKEN", "") or "",

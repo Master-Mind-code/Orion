@@ -187,3 +187,91 @@ def set_trading_state(updates: dict):
         state.update(updates)
         _save(STATE_FILE, state)
         return state
+
+
+# ─────────────────────────────────────────────────────────────────
+# Garde-fou de risque & Rapports
+# ─────────────────────────────────────────────────────────────────
+
+def validate_order_risk(cmd: dict, account_balance: float = 10000.0, max_risk_pct: float | None = None) -> tuple[bool, str, float]:
+    """Vérifie le risque d'un ordre avant exécution.
+
+    Retourne (valide: bool, motif: str, pct_risque: float).
+    Refuse catégoriquement si le risque au Stop Loss dépasse max_risk_pct (défaut: state['risk_percent'] ou 1.0%).
+    """
+    action = str(cmd.get("action", "")).upper()
+    if action not in ("BUY", "SELL", "ORDER_BUY", "ORDER_SELL"):
+        return True, "Action neutre", 0.0
+
+    entry = float(cmd.get("entry") or cmd.get("price") or 0.0)
+    sl = float(cmd.get("sl") or 0.0)
+    volume = float(cmd.get("volume") or cmd.get("lots") or 0.01)
+
+    state = get_trading_state()
+    max_pct = float(max_risk_pct if max_risk_pct is not None else state.get("risk_percent", 1.0))
+
+    if account_balance <= 0:
+        account_balance = 10000.0
+
+    if entry <= 0 or sl <= 0:
+        return False, "Garde-fou de risque : Stop Loss (SL) obligatoire pour chaque ordre.", 0.0
+
+    distance = abs(entry - sl)
+    symbol = str(cmd.get("symbol", "XAUUSD")).upper()
+    contract_size = 100.0 if "XAU" in symbol or "GOLD" in symbol else 100000.0
+
+    perte_estimee = distance * volume * contract_size
+    pct_risque = round((perte_estimee / account_balance) * 100, 2)
+
+    if pct_risque > max_pct:
+        motif = (
+            f"[RISQUE REJETÉ] GARDE-FOU DE RISQUE DÉCLENCHÉ : L'ordre engagerait {pct_risque}% du capital "
+            f"({perte_estimee:.2f} $ sur un solde de {account_balance:.2f} $). "
+            f"La limite maximale autorisée est de {max_pct}%."
+        )
+        return False, motif, pct_risque
+
+    return True, f"Risque validé : {pct_risque}% du capital ({perte_estimee:.2f} $)", pct_risque
+
+
+def generate_session_report(today_only: bool = True) -> dict:
+    """Génère un bilan de la session de trading (pour Telegram et dashboard)."""
+    history = _load(HISTORY_FILE, [])
+    open_trades = get_open_trades()
+
+    now_str = datetime.now().strftime("%Y-%m-%d")
+    if today_only:
+        trades_today = [
+            t for t in history 
+            if str(t.get("closed_at", "")).startswith(now_str) or str(t.get("time", "")).startswith(now_str)
+        ]
+    else:
+        trades_today = history
+
+    total = len(trades_today)
+    wins = len([t for t in trades_today if t.get("profit", 0) > 0])
+    losses = len([t for t in trades_today if t.get("profit", 0) <= 0])
+    pnl = sum(t.get("profit", 0) for t in trades_today)
+    rrs = [t.get("rr", 0) for t in trades_today if t.get("rr", 0) > 0]
+    avg_rr = round(sum(rrs) / len(rrs), 2) if rrs else 0.0
+
+    msg = (
+        f"📊 *RAPPORT DE SESSION TRADING — {datetime.now().strftime('%d/%m/%Y')}*\n\n"
+        f"• *Trades fermés aujourd'hui* : {total} ({wins}W / {losses}L)\n"
+        f"• *Winrate* : {round(wins/total*100, 1) if total else 0}%\n"
+        f"• *PnL Net* : {pnl:+.2f} $\n"
+        f"• *RR Moyen* : {avg_rr}\n"
+        f"• *Positions ouvertes actuellement* : {len(open_trades)}\n"
+    )
+
+    return {
+        "date": now_str,
+        "total_trades": total,
+        "wins": wins,
+        "losses": losses,
+        "net_pnl": round(pnl, 2),
+        "avg_rr": avg_rr,
+        "open_positions": len(open_trades),
+        "report_text": msg,
+    }
+

@@ -29,5 +29,14 @@ contextBridge.exposeInMainWorld("orionDesktop", {
   capsule: (action = "basculer") => ipcRenderer.invoke("orion:capsule", action),
   cockpit: (action = "basculer") => ipcRenderer.invoke("orion:cockpit", action),
 
+  notifier: (opts) => ipcRenderer.invoke("orion:notifier", opts),
+  autostart: {
+    set: (enabled) => ipcRenderer.invoke("orion:autostart-set", enabled),
+    get: () => ipcRenderer.invoke("orion:autostart-get"),
+  },
+  capsuleState: (state) => ipcRenderer.invoke("orion:capsule-state", state),
+  onCapsuleUpdate: (callback) => ipcRenderer.on("orion:capsule-update", (_e, state) => callback(state)),
+  modeOverlay: (opts) => ipcRenderer.invoke("orion:mode-overlay", opts),
+
   infos: () => ipcRenderer.invoke("orion:infos"),
 });

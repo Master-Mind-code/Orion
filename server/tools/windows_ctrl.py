@@ -218,8 +218,96 @@ def window_control(
     return {"success": True, "action": act, "window": _describe(w)}
 
 
+def window_watch(
+    title_contains: str,
+    condition: str = "closed",
+    target_text: str | None = None,
+    timeout_sec: int = 300,
+    poll_interval: float = 2.0,
+) -> dict:
+    """Surveille une fenêtre en arrière-plan et envoie une notification quand la condition est remplie.
+
+    condition: 'closed' | 'title_changed' | 'text_appeared' | 'text_disappeared'
+    """
+    import threading
+
+    def _watch_task():
+        gw = _import_gw()
+        if gw is None:
+            return
+        
+        t_start = time.time()
+        timeout = float(timeout_sec)
+        interval = max(0.5, float(poll_interval))
+        initial_title = None
+
+        try:
+            w_init = _find(gw, title_contains)
+            initial_title = w_init.title
+        except LookupError:
+            pass
+
+        triggered = False
+        reason = ""
+
+        while time.time() - t_start < timeout:
+            time.sleep(interval)
+            try:
+                w_current = _find(gw, title_contains)
+            except LookupError:
+                if condition == "closed":
+                    triggered = True
+                    reason = f"La fenêtre '{title_contains}' est maintenant fermée."
+                    break
+                w_current = None
+
+            if w_current:
+                if condition == "title_changed" and initial_title and w_current.title != initial_title:
+                    triggered = True
+                    reason = f"Le titre de la fenêtre a changé : '{w_current.title}'"
+                    break
+
+                if target_text and condition in ("text_appeared", "text_disappeared"):
+                    if target_text.lower() in w_current.title.lower():
+                        if condition == "text_appeared":
+                            triggered = True
+                            reason = f"Le texte '{target_text}' est apparu dans le titre."
+                            break
+                    else:
+                        if condition == "text_disappeared":
+                            triggered = True
+                            reason = f"Le texte '{target_text}' a disparu du titre."
+                            break
+
+        if triggered:
+            msg = f"🔔 Surveillance de fenêtre : {reason}"
+            print(f"[WINDOW WATCH] {msg}", flush=True)
+            try:
+                from server.tools.notifications import notify
+                notify("Orion · Surveillance Fenêtre", reason)
+            except Exception:
+                pass
+            try:
+                from server.tools.notifications import notify_telegram
+                notify_telegram(msg)
+            except Exception:
+                pass
+
+    threading.Thread(target=_watch_task, daemon=True).start()
+
+    return {
+        "success": True,
+        "title_contains": title_contains,
+        "condition": condition,
+        "timeout_sec": timeout_sec,
+        "message": f"Surveillance lancée en arrière-plan pour la fenêtre '{title_contains}' (condition={condition}).",
+    }
+
+
 HANDLERS = {
     "list_windows": lambda p: list_windows(),
     "focus_window": lambda p: focus_window(**p),
     "window_control": lambda p: window_control(**p),
+    "window_watch": lambda p: window_watch(**p),
 }
+

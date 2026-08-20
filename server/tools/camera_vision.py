@@ -224,12 +224,28 @@ def camera_look(seuil: float = 0.4, max_objets: int = 8,
                       "largeur": int(bb.width), "hauteur": int(bb.height)},
         })
 
+    # Enrichissement reconnaissance de visages connus si des personnes sont vues
+    visages_identifies = []
+    if any(o["classe"] == "person" for o in objets):
+        try:
+            from server.vision.core.faces import recognize_faces
+            faces = recognize_faces(image)
+            for f in faces:
+                if f["name"] != "Inconnu":
+                    visages_identifies.append(f["name"])
+        except Exception:
+            pass
+
     out: dict = {
         "success": True,
         "objets": objets,
         "count": len(objets),
         "resume": ", ".join(o["objet"] for o in objets) or "rien de reconnu",
     }
+    if visages_identifies:
+        out["visages_connus"] = visages_identifies
+        out["resume"] = f"{out['resume']} (visages : {', '.join(visages_identifies)})"
+
     if err == "__noire__":
         # Sans ça, « rien de reconnu » sur une image noire ressemble à une
         # pièce vide alors que la caméra ne voit littéralement rien.
@@ -342,11 +358,217 @@ def vision_app_stop(app: str | None = None) -> dict:
             "encore_en_cours": [n for n, p in _processus.items() if p.poll() is None]}
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# Reconnaissance de visages connus (100% local)
+# ════════════════════════════════════════════════════════════════════════════
+
+def face_enroll(name: str, image_path: str | None = None) -> dict:
+    """Enregistre un nouveau visage connu sous un nom donné (depuis la caméra ou une photo locale)."""
+    if not _camera_active() and not image_path:
+        return _refus()
+    try:
+        import cv2
+        from server.vision.core.faces import enroll_face
+    except ImportError as exc:
+        return {"success": False, "error": f"Erreur import faces : {exc}"}
+
+    if image_path:
+        p = Path(image_path).expanduser()
+        if not p.exists():
+            return {"success": False, "error": f"Fichier introuvable : {p}"}
+        image = cv2.imread(str(p))
+        if image is None:
+            return {"success": False, "error": f"Impossible de lire l'image : {p}"}
+    else:
+        image, err = _prendre_image()
+        if image is None:
+            return {"success": False, "error": err}
+
+    return enroll_face(name, image)
+
+
+def face_list() -> dict:
+    """Liste les personnes enregistrées dans la base de reconnaissance faciale locale."""
+    try:
+        from server.vision.core.faces import list_faces
+        faces = list_faces()
+        return {"success": True, "faces": faces, "count": len(faces)}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def face_delete(name: str) -> dict:
+    """Supprime les données biométriques locales enregistrées pour une personne."""
+    try:
+        from server.vision.core.faces import delete_face
+        return delete_face(name)
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Observation temporelle & Lecture de documents
+# ════════════════════════════════════════════════════════════════════════════
+
+def camera_watch(duree: float = 5.0, interval: float = 1.0, save_snapshots: bool = False) -> dict:
+    """Observe la scène pendant N secondes et résume les événements aperçus (objets, personnes, gestes)."""
+    if not _camera_active():
+        return _refus()
+
+    duree_val = max(1.0, min(30.0, float(duree)))
+    interval_val = max(0.5, min(5.0, float(interval)))
+
+    from server.vision.core.camera import ouvrir_camera
+    from server.vision.core.objects import creer_detecteur_objets, libelle_objet
+    try:
+        from server.vision.core.faces import recognize_faces
+    except ImportError:
+        recognize_faces = None
+
+    cap = ouvrir_camera()
+    if cap is None:
+        return {"success": False, "error": "Aucune caméra disponible."}
+
+    detecteur = creer_detecteur_objets(seuil=0.4, max_resultats=8)
+    timeline = []
+    t_start = time.time()
+    t_end = t_start + duree_val
+    objets_vus = set()
+    personnes_vues = set()
+
+    import cv2
+    import mediapipe as mp
+
+    try:
+        frame_idx = 0
+        while time.time() < t_end:
+            ok, frame = cap.read()
+            if not ok or frame is None:
+                time.sleep(0.1)
+                continue
+
+            t_rel = round(time.time() - t_start, 1)
+
+            if frame_idx == 0 or (time.time() - t_start) >= (len(timeline) * interval_val):
+                frame_objs = []
+                if detecteur:
+                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+                    res = detecteur.detect_for_video(mp_image, int(time.time() * 1000))
+                    for det in getattr(res, "detections", []) or []:
+                        cat = det.categories[0]
+                        label = libelle_objet(cat.category_name)
+                        frame_objs.append(label)
+                        objets_vus.add(label)
+
+                frame_faces = []
+                if recognize_faces:
+                    found_faces = recognize_faces(frame)
+                    for f in found_faces:
+                        if f["name"] != "Inconnu":
+                            frame_faces.append(f["name"])
+                            personnes_vues.add(f["name"])
+
+                timeline.append({
+                    "timestamp_s": t_rel,
+                    "objets": frame_objs,
+                    "visages_connus": frame_faces,
+                })
+
+            frame_idx += 1
+            time.sleep(0.1)
+
+    finally:
+        cap.release()
+        if detecteur:
+            detecteur.close()
+
+    resume_parts = []
+    if personnes_vues:
+        resume_parts.append(f"Personnes identifiées : {', '.join(sorted(personnes_vues))}")
+    if objets_vus:
+        resume_parts.append(f"Objets observés : {', '.join(sorted(objets_vus))}")
+    if not resume_parts:
+        resume_parts.append("Rien de particulier observé sur la période.")
+
+    return {
+        "success": True,
+        "duree_sec": round(duree_val, 1),
+        "echantillons": len(timeline),
+        "resume": " | ".join(resume_parts),
+        "personnes_connues": sorted(list(personnes_vues)),
+        "objets_vus": sorted(list(objets_vus)),
+        "timeline": timeline,
+    }
+
+
+def camera_read_document(doc_type: str = "auto", prompt_extra: str | None = None, save_path: str | None = None) -> dict:
+    """Photographie une facture / un reçu / un document via la caméra et en extrait des données structurées pour HAM-COMPTA."""
+    if not _camera_active():
+        return _refus()
+
+    snap = camera_snapshot(path=save_path)
+    if not snap.get("success"):
+        return snap
+
+    img_path = snap["path"]
+    from server.tools.vision import analyze_image
+    import json
+
+    prompt_compta = (
+        "Analyse ce document (facture, reçu ou ticket de caisse) et extrait les données sous forme de JSON strict.\n"
+        "Champs requis :\n"
+        "{\n"
+        '  "type_document": "facture|recu|ticket|autre",\n'
+        '  "fournisseur": "Nom du commerce ou de la société",\n'
+        '  "date": "YYYY-MM-DD ou date visible",\n'
+        '  "numero_facture": "Numéro du reçu/facture si présent",\n'
+        '  "montant_ht": 0.00,\n'
+        '  "montant_tva": 0.00,\n'
+        '  "montant_ttc": 0.00,\n'
+        '  "devise": "EUR|USD|...",\n'
+        '  "lignes": [{"description": "...", "quantite": 1, "prix_unitaire": 0.00, "total": 0.00}]\n'
+        "}\n"
+    )
+    if prompt_extra:
+        prompt_compta += f"\nConsigne supplémentaire : {prompt_extra}"
+
+    res_vision = analyze_image(path=img_path, prompt=prompt_compta)
+    if not res_vision.get("success"):
+        return res_vision
+
+    desc = res_vision.get("description", "")
+    donnees_structurees = None
+
+    try:
+        start_idx = desc.find("{")
+        end_idx = desc.rfind("}")
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            json_str = desc[start_idx:end_idx + 1]
+            donnees_structurees = json.loads(json_str)
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "image_path": img_path,
+        "raw_analysis": desc,
+        "data": donnees_structurees,
+        "message": f"Document photographié et analysé ({img_path}).",
+    }
+
+
 HANDLERS = {
-    "camera_status":    lambda p: camera_status(),
-    "camera_snapshot":  lambda p: camera_snapshot(**p),
-    "camera_look":      lambda p: camera_look(**p),
-    "camera_gesture":   lambda p: camera_gesture(),
-    "vision_app_start": lambda p: vision_app_start(**p),
-    "vision_app_stop":  lambda p: vision_app_stop(**p),
+    "camera_status":        lambda p: camera_status(),
+    "camera_snapshot":      lambda p: camera_snapshot(**p),
+    "camera_look":          lambda p: camera_look(**p),
+    "camera_gesture":       lambda p: camera_gesture(),
+    "camera_watch":         lambda p: camera_watch(**p),
+    "camera_read_document": lambda p: camera_read_document(**p),
+    "face_enroll":          lambda p: face_enroll(**p),
+    "face_list":            lambda p: face_list(),
+    "face_delete":          lambda p: face_delete(**p),
+    "vision_app_start":     lambda p: vision_app_start(**p),
+    "vision_app_stop":      lambda p: vision_app_stop(**p),
 }
+

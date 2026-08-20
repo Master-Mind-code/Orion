@@ -12,7 +12,7 @@
  */
 const {
   app, BrowserWindow, ipcMain, globalShortcut, desktopCapturer,
-  clipboard, screen, shell, nativeImage,
+  clipboard, screen, shell, nativeImage, Notification,
 } = require("electron");
 const path = require("node:path");
 
@@ -217,10 +217,52 @@ ipcMain.handle("orion:cockpit", (_e, action) => {
   return cockpit.isVisible();
 });
 
+ipcMain.handle("orion:notifier", (_e, { title, body, icon } = {}) => {
+  if (Notification.isSupported()) {
+    new Notification({
+      title: title || "Orion",
+      body: body || "",
+      icon: icon || null,
+    }).show();
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle("orion:autostart-set", (_e, enabled) => {
+  app.setLoginItemSettings({
+    openAtLogin: Boolean(enabled),
+    openAsHidden: true,
+  });
+  return app.getLoginItemSettings().openAtLogin;
+});
+
+ipcMain.handle("orion:autostart-get", () => {
+  return app.getLoginItemSettings().openAtLogin;
+});
+
+ipcMain.handle("orion:capsule-state", (_e, state) => {
+  if (capsule && !capsule.isDestroyed()) {
+    capsule.webContents.send("orion:capsule-update", state);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle("orion:mode-overlay", (e, { enabled = true, clickThrough = false } = {}) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win) return false;
+  win.setAlwaysOnTop(Boolean(enabled), "screen-saver");
+  win.setVisibleOnAllWorkspaces(Boolean(enabled), { visibleOnFullScreen: true });
+  win.setIgnoreMouseEvents(Boolean(clickThrough), { forward: true });
+  return true;
+});
+
 ipcMain.handle("orion:infos", () => ({
   plateforme: process.platform,
   versionElectron: process.versions.electron,
   dev: Boolean(DEV_URL),
+  autostart: app.getLoginItemSettings().openAtLogin,
 }));
 
 /* ──────────────────────────── Cycle de vie ─────────────────────────── */

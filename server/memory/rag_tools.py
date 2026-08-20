@@ -87,7 +87,7 @@ def memory_recall(query: str, top_k: int = 5, min_score: float = 0.25,
     top_k = max(1, min(int(top_k or 5), 20))
     try:
         embedder = get_embedder()
-        q = embedder.embed_one(query)
+        q = embedder.embed_one(query, is_query=True)
         results = _store(namespace).search(q, top_k=top_k, min_score=float(min_score))
     except ImportError as exc:
         return {"success": False, "error": str(exc)}
@@ -270,13 +270,35 @@ def memory_index_dir(path: str, namespace: str = "default", extensions: list[str
     }
 
 
+def vault_reindex_now_tool() -> dict:
+    from server.memory.auto_indexer import vault_reindex_now
+    return vault_reindex_now()
+
+def vault_reindex_status_tool() -> dict:
+    from server.memory.auto_indexer import vault_reindex_status
+    return vault_reindex_status()
+
+def journal_generate_daily_tool(today_only: bool = True) -> dict:
+    from server.memory.daily_journal import generate_daily_journal
+    return generate_daily_journal(today_only=today_only)
+
+def episodic_query_tool(query: str | None = None, days_back: int = 7) -> dict:
+    from server.memory.episodic_memory import episodic_query
+    return episodic_query(query=query, days_back=days_back)
+
+
 HANDLERS = {
-    "memory_remember":    lambda p: memory_remember(**p),
-    "memory_recall":      lambda p: memory_recall(**p),
-    "memory_forget":      lambda p: memory_forget(**p),
-    "memory_clear":       lambda p: memory_clear(**p),
-    "memory_stats":       lambda p: memory_stats(**p),
-    "memory_list":        lambda p: memory_list(**p),
-    "memory_index_file":  lambda p: memory_index_file(**p),
-    "memory_index_dir":   lambda p: memory_index_dir(**p),
+    "memory_remember":       lambda p: memory_remember(**p),
+    "memory_recall":         lambda p: memory_recall(**p),
+    "memory_forget":         lambda p: memory_forget(**p),
+    "memory_clear":          lambda p: memory_clear(**p),
+    "memory_stats":          lambda p: memory_stats(**p),
+    "memory_list":           lambda p: memory_list(**p),
+    "memory_index_file":     lambda p: memory_index_file(**p),
+    "memory_index_dir":      lambda p: memory_index_dir(**p),
+    "vault_reindex_now":     lambda p: vault_reindex_now_tool(),
+    "vault_reindex_status":  lambda p: vault_reindex_status_tool(),
+    "journal_generate_daily": lambda p: journal_generate_daily_tool(**p),
+    "episodic_query":        lambda p: episodic_query_tool(**p),
 }
+

@@ -102,6 +102,14 @@ def screenshot(
         import base64
         with open(path, "rb") as f:
             result["base64"] = base64.b64encode(f.read()).decode("ascii")
+
+    # Maintenance non bloquante : purge automatique des anciennes captures
+    try:
+        from server.tools.capture_rotation import rotate_captures
+        rotate_captures(max_files=100, max_age_days=7)
+    except Exception:
+        pass
+
     return result
 
 
@@ -128,7 +136,59 @@ def list_monitors() -> dict:
         return {"success": False, "error": str(exc)}
 
 
+def screen_ocr(
+    region: dict | None = None,
+    monitor: int = 0,
+    title_contains: str | None = None,
+    prompt: str = "Lis et retranscris tout le texte visible sur cette image.",
+) -> dict:
+    """Effectue un OCR de l'écran, d'une région ou d'une fenêtre ("lis-moi cette erreur").
+
+    Utilise pytesseract si disponible ou s'appuie sur l'API Vision LLM d'Orion.
+    """
+    if title_contains:
+        try:
+            from server.tools.windows_ctrl import _import_gw, _find
+            gw = _import_gw()
+            if gw:
+                w = _find(gw, title_contains)
+                region = {"x": w.left, "y": w.top, "width": w.width, "height": w.height}
+        except Exception:
+            pass
+
+    snap_res = screenshot(monitor=monitor, region=region)
+    if not snap_res.get("success"):
+        return snap_res
+
+    image_path = snap_res["path"]
+
+    tesseract_text = None
+    try:
+        import pytesseract
+        from PIL import Image
+        img = Image.open(image_path)
+        tesseract_text = pytesseract.image_to_string(img).strip()
+    except Exception:
+        pass
+
+    from server.tools.vision import analyze_image
+    vision_res = analyze_image(path=image_path, prompt=prompt)
+
+    extracted_text = tesseract_text or vision_res.get("description", "")
+
+    return {
+        "success": True,
+        "path": image_path,
+        "method": "tesseract" if tesseract_text else vision_res.get("provider", "vision"),
+        "text": extracted_text,
+        "tesseract_raw": tesseract_text,
+        "vision_analysis": vision_res.get("description"),
+    }
+
+
 HANDLERS = {
     "screenshot": lambda p: screenshot(**p),
     "list_monitors": lambda p: list_monitors(),
+    "screen_ocr": lambda p: screen_ocr(**p),
 }
+

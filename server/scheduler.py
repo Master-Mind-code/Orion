@@ -206,15 +206,73 @@ def _run_morning_briefing():
         pass
 
 
+def _run_evening_trading_report():
+    """Génère et pousse le bilan de trading sur Telegram chaque soir."""
+    try:
+        from server.tools.trading_tools import trading_session_report_tool
+        res = trading_session_report_tool(push_telegram=True)
+        print(f"[scheduler] Rapport de session trading envoyé : {res}")
+    except Exception as exc:
+        print(f"[scheduler!] Échec rapport trading : {exc}")
+
+
+def _run_evening_daily_journal():
+    """Génère et consigne le journal de bord quotidien chaque soir à 23h00."""
+    try:
+        from server.memory.daily_journal import generate_daily_journal
+        res = generate_daily_journal(today_only=True, push_obsidian=True)
+        print(f"[scheduler] Journal de bord quotidien créé : {res.get('note_path')}")
+    except Exception as exc:
+        print(f"[scheduler!] Échec journal de bord : {exc}")
+
+
 def setup_default_jobs():
-    """Enregistre le briefing matinal si activé dans .env."""
-    if not _env_bool("BRIEFING_ENABLED", False):
-        return
-    h, m = _parse_time(get_env("BRIEFING_TIME", "08:00") or "08:00", (8, 0))
-    weekdays = _parse_weekdays(get_env("BRIEFING_WEEKDAYS"))
+    """Enregistre les jobs par défaut (briefing matinal, rapport de trading et journal de bord)."""
+    if _env_bool("BRIEFING_ENABLED", False):
+        h, m = _parse_time(get_env("BRIEFING_TIME", "08:00") or "08:00", (8, 0))
+        weekdays = _parse_weekdays(get_env("BRIEFING_WEEKDAYS"))
+        SCHEDULER.register_job({
+            "id": "morning_briefing",
+            "schedule": {"hour": h, "minute": m, "weekdays": weekdays},
+            "enabled": True,
+            "fn": _run_morning_briefing,
+        })
+
+    if _env_bool("SESSION_REPORT_ENABLED", True):
+        h_rep, m_rep = _parse_time(get_env("SESSION_REPORT_TIME", "20:00") or "20:00", (20, 0))
+        weekdays_rep = _parse_weekdays(get_env("SESSION_REPORT_WEEKDAYS"))
+        SCHEDULER.register_job({
+            "id": "evening_trading_report",
+            "schedule": {"hour": h_rep, "minute": m_rep, "weekdays": weekdays_rep},
+            "enabled": True,
+            "fn": _run_evening_trading_report,
+        })
+
+    if _env_bool("DAILY_JOURNAL_ENABLED", True):
+        h_j, m_j = _parse_time(get_env("DAILY_JOURNAL_TIME", "23:00") or "23:00", (23, 0))
+        SCHEDULER.register_job({
+            "id": "evening_daily_journal",
+            "schedule": {"hour": h_j, "minute": m_j},
+            "enabled": True,
+            "fn": _run_evening_daily_journal,
+        })
+
     SCHEDULER.register_job({
-        "id": "morning_briefing",
-        "schedule": {"hour": h, "minute": m, "weekdays": weekdays},
+        "id": "nightly_capture_rotation",
+        "schedule": {"hour": 3, "minute": 0},
         "enabled": True,
-        "fn": _run_morning_briefing,
+        "fn": _run_nightly_capture_rotation,
     })
+
+
+def _run_nightly_capture_rotation():
+    """Purge les anciennes captures d'écran chaque nuit à 03h00."""
+    try:
+        from server.tools.capture_rotation import rotate_captures
+        res = rotate_captures(max_files=100, max_age_days=7)
+        print(f"[scheduler] Purge nocturne des captures : {res.get('deleted_files')} fichier(s) supprimé(s).")
+    except Exception as exc:
+        print(f"[scheduler!] Échec purge des captures : {exc}")
+
+
+

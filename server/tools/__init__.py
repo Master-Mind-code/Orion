@@ -16,6 +16,9 @@ from .termux_mobile import HANDLERS as _TERMUX_HANDLERS
 from .vision import HANDLERS as _VISION_HANDLERS
 from .camera_vision import HANDLERS as _CAMERA_HANDLERS
 from .audit_query import HANDLERS as _AUDIT_HANDLERS
+from .trading_tools import HANDLERS as _TRADING_HANDLERS
+from .voice_tools import HANDLERS as _VOICE_HANDLERS
+from server.desktop.macros import HANDLERS as _MACRO_HANDLERS
 from server.safety_backup import HANDLERS as _BACKUP_HANDLERS
 from server.mcp_bridge import HANDLERS as _MCP_HANDLERS
 
@@ -50,6 +53,9 @@ ALL_HANDLERS = {
     **_VISION_HANDLERS,
     **_CAMERA_HANDLERS,
     **_AUDIT_HANDLERS,
+    **_TRADING_HANDLERS,
+    **_VOICE_HANDLERS,
+    **_MACRO_HANDLERS,
     **_BACKUP_HANDLERS,
     **_MCP_HANDLERS,
     **_GOOGLE_HANDLERS,

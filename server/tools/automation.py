@@ -317,6 +317,12 @@ def clipboard_get() -> dict:
         return _missing("pyperclip")
     try:
         content = pyperclip.paste()
+        if content:
+            try:
+                from server.desktop.clipboard_history import push_clipboard_history
+                push_clipboard_history(content)
+            except Exception:
+                pass
         return {"success": True, "content": content,
                 "length": len(content) if content else 0}
     except Exception as exc:
@@ -333,9 +339,33 @@ def clipboard_set(text: str) -> dict:
         return _missing("pyperclip")
     try:
         pyperclip.copy(text)
+        if text:
+            try:
+                from server.desktop.clipboard_history import push_clipboard_history
+                push_clipboard_history(text)
+            except Exception:
+                pass
         return {"success": True, "length": len(text)}
     except Exception as exc:
         return {"success": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def clipboard_history_get(limit: int = 20, search: str | None = None) -> dict:
+    """Récupère l'historique des 50 derniers contenus du presse-papier."""
+    try:
+        from server.desktop.clipboard_history import clipboard_history_get as _get_hist
+        return _get_hist(limit=limit, search=search)
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def clipboard_history_clear() -> dict:
+    """Efface l'historique du presse-papier."""
+    try:
+        from server.desktop.clipboard_history import clipboard_history_clear as _clear_hist
+        return _clear_hist()
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
 
 
 HANDLERS = {
@@ -350,4 +380,6 @@ HANDLERS = {
     "keyboard_key": lambda p: keyboard_key(**p),
     "clipboard_get": lambda p: clipboard_get(),
     "clipboard_set": lambda p: clipboard_set(**p),
+    "clipboard_history_get": lambda p: clipboard_history_get(**p),
+    "clipboard_history_clear": lambda p: clipboard_history_clear(),
 }

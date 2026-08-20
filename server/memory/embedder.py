@@ -12,7 +12,7 @@ import os
 
 import numpy as np
 
-DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+DEFAULT_MODEL = "intfloat/multilingual-e5-small"
 
 
 class Embedder:
@@ -30,28 +30,36 @@ class Embedder:
         self.model_name = model_name or os.getenv(
             "ORION_MEMORY_MODEL", DEFAULT_MODEL
         )
+        self.is_e5 = "e5" in self.model_name.lower()
         print(f"[memory] Chargement embeddings '{self.model_name}' ({device})...")
         self.model = SentenceTransformer(self.model_name, device=device)
-        # API a été renommée get_sentence_embedding_dimension → get_embedding_dimension
         if hasattr(self.model, "get_embedding_dimension"):
             self.dim = self.model.get_embedding_dimension()
         else:
             self.dim = self.model.get_sentence_embedding_dimension()
         print(f"[memory] Modèle prêt (dim={self.dim}).")
 
-    def embed(self, texts: list[str]) -> np.ndarray:
+    def embed(self, texts: list[str], is_query: bool = False) -> np.ndarray:
         if not texts:
             return np.zeros((0, self.dim), dtype=np.float32)
+
+        # Les modèles E5 nécessitent le préfixe 'query: ' ou 'passage: ' pour une précision maximale
+        if self.is_e5:
+            prefix = "query: " if is_query else "passage: "
+            formatted_texts = [f"{prefix}{t}" if not t.startswith(("query: ", "passage: ")) else t for t in texts]
+        else:
+            formatted_texts = texts
+
         vectors = self.model.encode(
-            texts,
+            formatted_texts,
             batch_size=32,
             normalize_embeddings=True,
             show_progress_bar=False,
         )
         return np.asarray(vectors, dtype=np.float32)
 
-    def embed_one(self, text: str) -> np.ndarray:
-        return self.embed([text])[0]
+    def embed_one(self, text: str, is_query: bool = False) -> np.ndarray:
+        return self.embed([text], is_query=is_query)[0]
 
 
 def get_embedder() -> Embedder:
