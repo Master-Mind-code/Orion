@@ -29,9 +29,15 @@ export async function appelerTool(
     return { success: false, error: "Aucun token serveur. Renseigne-le dans les paramètres." };
   }
   try {
-    const r = await fetch(`${baseHttp()}/api/tool?token=${encodeURIComponent(token)}`, {
+    // `verify_token` côté serveur est une dépendance HTTPBearer : elle lit
+    // l'en-tête Authorization, jamais la query string. Passer le token en
+    // paramètre d'URL renvoyait un 401 systématique.
+    const r = await fetch(`${baseHttp()}/api/tool`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         tool,
         args,
