@@ -287,3 +287,48 @@ async def broadcast_dashboard(message: dict):
     for d in dead:
         if d in dashboard_clients:
             dashboard_clients.remove(d)
+
+
+# ─────────────────────────────────────────────────────────────────
+# Kronos Neural Foundation Engine Endpoints
+# ─────────────────────────────────────────────────────────────────
+@router.get("/kronos/status")
+async def get_kronos_status():
+    from server.trading.kronos_engine import get_kronos_engine
+    engine = get_kronos_engine()
+    return {
+        "status": "online" if engine.is_loaded else ("error" if engine.loading_error else "idle"),
+        "is_loaded": engine.is_loaded,
+        "device": engine.device,
+        "model_name": engine.model_name,
+        "tokenizer_name": engine.tokenizer_name,
+        "error": engine.loading_error
+    }
+
+
+@router.post("/kronos/predict")
+async def kronos_predict_endpoint(request: Request, token: str = Depends(trading_token)):
+    check_token(token)
+    payload = await request.json()
+    market_data = payload.get("market_data", payload)
+    pred_len = int(payload.get("pred_len", 12))
+    monte_carlo = bool(payload.get("monte_carlo", False))
+
+    from server.trading.kronos_engine import get_kronos_engine
+    engine = get_kronos_engine()
+
+    if monte_carlo:
+        res = engine.run_monte_carlo_simulations(market_data, pred_len=pred_len, n_samples=10)
+    else:
+        res = engine.predict_market_data(market_data, pred_len=pred_len)
+
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Échec de la prédiction Kronos"))
+
+    await broadcast_dashboard({
+        "type": "kronos_update",
+        "data": res
+    })
+
+    return res
+

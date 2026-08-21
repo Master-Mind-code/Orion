@@ -113,11 +113,26 @@ Positions ouvertes : {len(open_pos)} trade(s)
             prompt += f"P&L: {p.get('profit'):.2f}$\n"
         prompt += "\n"
 
+    # Intégration de la prédiction du Foundation Model Kronos
+    try:
+        from server.trading.kronos_engine import get_kronos_engine
+        engine = get_kronos_engine()
+        kronos_res = engine.predict_market_data(market_data, pred_len=12)
+        if kronos_res.get("success"):
+            prompt += "=== KRONOS NEURAL FOUNDATION FORECAST ===\n"
+            prompt += f"Biais directionnel neuronal : {kronos_res.get('directional_bias')} (Confiance: {int(kronos_res.get('confidence', 0)*100)}%)\n"
+            prompt += f"Prix actuel : {kronos_res.get('current_close')} | Prix cible prédit (+12 bougies) : {kronos_res.get('predicted_close')} ({kronos_res.get('predicted_change_pct'):+}%)\n"
+            prompt += f"Extrême High max prédit : {kronos_res.get('predicted_high_max')} | Extrême Low min prédit : {kronos_res.get('predicted_low_min')}\n"
+            prompt += "Consigne de Confluence : Recherche une synergie entre ce biais neuronal Kronos et les confirmations SMC/ICT.\n\n"
+    except Exception as e:
+        pass
+
     prompt += """=== INSTRUCTION ===
 Analyse ces données avec ta méthodologie institutionnelle complète.
 Identifie le meilleur setup si présent. Retourne UNIQUEMENT le JSON de décision."""
 
     return prompt
+
 
 
 def analyze_market(market_data: dict) -> dict:

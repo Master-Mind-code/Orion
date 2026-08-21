@@ -1059,6 +1059,26 @@ TOOLS = [
         "description": "Récupère les métriques de performance globales d'une stratégie de backtest.",
         "input_schema": {"type": "object", "properties": {}},
     },
+    {
+        "name": "kronos_predict_candles",
+        "description": "Exécute la prédiction neuronale du Foundation Model Kronos sur un symbole financier "
+                       "(ex: 'XAUUSD', 'BTCUSD', 'EURUSD'). Prédit les prochains N chandeliers (OHLCV), "
+                       "le biais directionnel, la confiance et le cône de probabilité Monte-Carlo.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbole financier (ex: 'XAUUSD')", "default": "XAUUSD"},
+                "pred_len": {"type": "integer", "description": "Nombre de bougies à prédire dans le futur (8 à 48)", "default": 12},
+                "monte_carlo": {"type": "boolean", "description": "Générer les cônes de probabilité (Percentiles 10%, 50%, 90%)", "default": False},
+            },
+        },
+    },
+    {
+        "name": "kronos_model_status",
+        "description": "Obtient l'état du moteur neuronal Kronos (modèle chargé, GPU/CPU, état d'initialisation).",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+
     # ─── Tools Bureau / Desktop ───────────────────────────────
     {
         "name": "screen_ocr",
