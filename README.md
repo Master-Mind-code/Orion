@@ -143,8 +143,12 @@ fermer), presse-papier.
 
 **Mobile** — outils Termux sur Android en mode worker.
 
-**Trading** — analyseur Claude branché sur MetaTrader 5 via l'EA `EA/OrionTrader.mq5`,
-dashboard dédié.
+**Trading & Mission de Survie** —
+- **Mission de Survie (100.000 / jour)** : Mode haute performance axé sur l'optimisation financière du capital. Suivi du P&L quotidien en temps réel, score de santé du capital (*Health Score* 0-100%), limites de drawdown quotidien et bascule automatique en *Cooldown*, widget HUD dédié sur le cockpit/dashboard.
+- **Analyse & Sélecteur d'Actions BRVM (150.000 FCFA / mois)** : Analyse fondamentale (PER, Rendement des dividendes %, ROE %, Marge Nette %) et technique des valeurs cotées sur la BRVM (Bourse Régionale des Valeurs Mobilières - UEMOA / Abidjan). Générateur automatique de portefeuille de rendement/croissance ciblé sur-mesure (Sonatel - SNTS, SGBCI - SGBIC, Orange CI - ORAC, Coris Bank - CBI, Palmci - PALC, etc.).
+- **Inférence Neuronal Kronos pour la BRVM** : Modèle neuronal PyTorch autorégressif (*NeoQuasar/Kronos-mini*) projetant la trajectoire K-lines des actions de la zone UEMOA, les cours cibles en FCFA et les probabilités de tendance.
+- **Tools natifs** : `brvm_stock_picker`, `brvm_stock_analysis`, `brvm_market_overview`, `brvm_income_portfolio`, `brvm_kronos_predict`.
+- **MetaTrader 5 & TradingView** : Analyseur Claude branché sur MT5 via l'EA `EA/OrionTrader.mq5` et pont MCP pour TradingView, dashboard dédié.
 
 **Pont MCP** — Orion consomme n'importe quel serveur MCP externe comme des outils
 natifs. Voir `mcp_servers.example.json` : TradingView (22 outils) et MetaTrader 5
@@ -196,6 +200,8 @@ mot de passe pour les outils sensibles, audit.
 
 ```bash
 python tests/smoke.py                     # suite générale
+python tests/test_full_kronos_orion_pipeline.py  # pipeline complet Kronos + Orion
+python tests/test_brvm_engine.py          # moteur d'analyse BRVM, portefeuille & Kronos
 python tests/test_desktop_tools.py        # outils bureau, aucune action physique
 python tests/manual/desktop_e2e.py        # bout en bout — PREND LE CONTRÔLE de la machine
 python tests/manual/mcp_bridge_check.py   # pont MCP — démarre les serveurs, n'envoie aucun ordre
@@ -210,10 +216,11 @@ réellement la souris et le clavier pendant une dizaine de secondes.
 
 ```
 server/          serveur FastAPI + WebSocket, orchestrateur, sécurité
-  tools/         outils exposés au LLM
+  tools/         outils exposés au LLM (bureau, web, vision, BRVM, Kronos, etc.)
   mcp_bridge/    client MCP stdio générique
-  trading/       analyseur IA + routes du dashboard
+  trading/       analyseur IA, mission 100k, moteur BRVM, moteur neuronal Kronos + routes HTTP
   memory/        mémoire vectorielle
+data/            persistance JSON/SQLite (mission_state.json, brvm_stocks.json, audit.db)
 agent/           boucle d'agent
 interface/       CLI
 voice/           STT, TTS, VAD, wake word
