@@ -332,3 +332,96 @@ async def kronos_predict_endpoint(request: Request, token: str = Depends(trading
 
     return res
 
+
+# ─────────────────────────────────────────────────────────────────
+# Mission 100K / Jour Endpoints
+# ─────────────────────────────────────────────────────────────────
+@router.get("/mission/status")
+async def get_mission_status():
+    from server.trading.mission_engine import get_mission_engine
+    return get_mission_engine().get_status()
+
+
+@router.post("/mission/config")
+async def update_mission_config(request: Request, token: str = Depends(trading_token)):
+    check_token(token)
+    payload = await request.json()
+    daily_target = payload.get("daily_target")
+    currency = payload.get("currency")
+    max_drawdown = payload.get("max_daily_drawdown_percent")
+
+    from server.trading.mission_engine import get_mission_engine
+    res = get_mission_engine().update_config(
+        daily_target=daily_target,
+        currency=currency,
+        max_drawdown=max_drawdown
+    )
+
+    await broadcast_dashboard({
+        "type": "mission_update",
+        "data": res
+    })
+
+    return res
+
+
+@router.post("/mission/record_trade")
+async def record_mission_trade(request: Request, token: str = Depends(trading_token)):
+    check_token(token)
+    payload = await request.json()
+    pnl = float(payload.get("pnl", 0.0))
+    symbol = str(payload.get("symbol", "XAUUSD"))
+    is_win = payload.get("is_win")
+
+    from server.trading.mission_engine import get_mission_engine
+    res = get_mission_engine().record_trade(pnl=pnl, symbol=symbol, is_win=is_win)
+
+    await broadcast_dashboard({
+        "type": "mission_update",
+        "data": res
+    })
+
+    return res
+
+
+# ─────────────────────────────────────────────────────────────────
+# BRVM Stock Picker & Analysis Endpoints
+# ─────────────────────────────────────────────────────────────────
+@router.get("/brvm/overview")
+async def get_brvm_market_overview():
+    from server.trading.brvm_engine import get_brvm_engine
+    return get_brvm_engine().get_market_overview()
+
+
+@router.get("/brvm/picker")
+async def brvm_stock_picker_api(profile: str = "balanced", sector: str = None, top_n: int = 5):
+    from server.trading.brvm_engine import get_brvm_engine
+    return get_brvm_engine().pick_stocks(profile=profile, sector=sector, top_n=top_n)
+
+
+@router.get("/brvm/stock/{symbol}")
+async def brvm_stock_analysis_api(symbol: str):
+    from server.trading.brvm_engine import get_brvm_engine
+    res = get_brvm_engine().analyze_stock(symbol)
+    if not res.get("success"):
+        raise HTTPException(status_code=404, detail=res.get("error"))
+    return res
+
+
+@router.get("/brvm/income_portfolio")
+async def brvm_income_portfolio_api(monthly_target: float = 150000.0):
+    from server.trading.brvm_engine import get_brvm_engine
+    return get_brvm_engine().build_income_portfolio(target_monthly_income_xof=monthly_target)
+
+
+@router.get("/brvm/kronos/{symbol}")
+async def brvm_kronos_predict_api(symbol: str, pred_len: int = 12):
+    from server.trading.brvm_engine import get_brvm_engine
+    res = get_brvm_engine().run_kronos_forecast_for_stock(symbol, pred_len=pred_len)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error"))
+    return res
+
+
+
+

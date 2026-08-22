@@ -210,6 +210,30 @@ header { position:relative; z-index:10; display:flex; align-items:center; justif
         <input style="width:200px" class="param-input" type="password" id="cfgToken" placeholder="ORION_SECRET_TOKEN">
       </div>
     </div>
+  <!-- ── Mission 100K HUD ── -->
+  <div class="card" style="grid-column:span 3; background: linear-gradient(135deg, rgba(13,20,37,0.95), rgba(6,9,15,0.98)); border: 1px solid var(--gold2);">
+    <div class="card-head" style="border-bottom: 1px solid var(--gold2);">
+      <span class="card-title" style="color:var(--gold); display:flex; align-items:center; gap:8px;">
+        <span class="sys-dot active" style="background:var(--gold); box-shadow:0 0 8px var(--gold);"></span>
+        MISSION DE SURVIE : OBJECTIF 100.000 / JOUR
+      </span>
+      <span id="missionSurvivalBadge" style="font-family:'Orbitron',monospace; font-size:9px; color:var(--green); letter-spacing:1px;">SURVIVAL MODE: CAPITAL PROTECTED</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-family:'Orbitron',monospace; font-size:10px; color:var(--text2);">PROGRESSION DU JOUR</span>
+        <span style="font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--gold);" id="missionPnlText">0.00 / 100,000.00 USD (0.00%)</span>
+      </div>
+      <div style="width:100%; height:12px; background:var(--bg3); border-radius:6px; overflow:hidden; border:1px solid var(--border); margin-bottom:12px;">
+        <div id="missionProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--gold), var(--green)); transition:width 0.4s ease;"></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-val gold" id="mTarget">100,000 $</div><div class="stat-lbl">Objectif Daily</div></div>
+        <div class="stat-box"><div class="stat-val green" id="mCurrentPnl">0.00 $</div><div class="stat-lbl">PnL Cumulé</div></div>
+        <div class="stat-box"><div class="stat-val cyan" id="mHealthScore">100%</div><div class="stat-lbl">Health Score</div></div>
+        <div class="stat-box"><div class="stat-val purple" id="mKronosScans">0</div><div class="stat-lbl">Scans Kronos</div></div>
+      </div>
+    </div>
   </div>
 
   <!-- ── Stats ── -->
@@ -391,6 +415,9 @@ function handleWsMessage(msg) {
       break;
     case 'close_all_requested':
       log('Clôture de toutes les positions demandée', 'warning');
+      break;
+    case 'mission_update':
+      updateMissionHUD(msg.data);
       break;
   }
 }
@@ -586,15 +613,67 @@ function toast(msg, type = 'info') {
   setTimeout(() => t.remove(), 3000);
 }
 
+function updateMissionHUD(m) {
+  if (!m) return;
+  const target = m.daily_target || 100000;
+  const pnl = m.current_daily_pnl || 0;
+  const pct = m.progress_percent || 0;
+  const curr = m.currency || 'USD';
+
+  const elTarget = document.getElementById('mTarget');
+  if (elTarget) elTarget.textContent = `${target.toLocaleString()} ${curr}`;
+  
+  const elPnl = document.getElementById('mCurrentPnl');
+  if (elPnl) {
+    elPnl.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ${curr}`;
+    elPnl.className = `stat-val ${pnl >= 0 ? 'green' : 'red'}`;
+  }
+
+  const elHealth = document.getElementById('mHealthScore');
+  if (elHealth) elHealth.textContent = `${m.health_score || 100}%`;
+
+  const elScans = document.getElementById('mKronosScans');
+  if (elScans) elScans.textContent = m.kronos_signals_scanned || 0;
+
+  const elText = document.getElementById('missionPnlText');
+  if (elText) elText.textContent = `${pnl.toFixed(2)} / ${target.toLocaleString()} ${curr} (${pct}%)`;
+
+  const elBar = document.getElementById('missionProgressBar');
+  if (elBar) elBar.style.width = `${pct}%`;
+
+  const badge = document.getElementById('missionSurvivalBadge');
+  if (badge) {
+    if (m.cooldown_active) {
+      badge.textContent = "COOLDOWN ACTIF (MAX DRAWDOWN)";
+      badge.style.color = "var(--red)";
+    } else {
+      badge.textContent = "SURVIVAL MODE: CAPITAL PROTECTED";
+      badge.style.color = "var(--green)";
+    }
+  }
+}
+
+async function fetchMissionStatus() {
+  try {
+    const r = await fetch(`${HTTP_BASE()}/api/mission/status`);
+    if (r.ok) {
+      const data = await r.json();
+      updateMissionHUD(data);
+    }
+  } catch (_) {}
+}
+
 // ── Init ──
 log('Dashboard Orion Trader initialisé', 'info');
 log('Renseigne le token et clique CONNECTER', 'info');
+
+fetchMissionStatus();
 
 // Connexion automatique si un token est déjà en mémoire
 if (TOKEN()) connectDashboard();
 
 // Rafraîchissement stats auto
-setInterval(refreshStats, 30000);
+setInterval(() => { refreshStats(); fetchMissionStatus(); }, 30000);
 </script>
 </body>
 </html>

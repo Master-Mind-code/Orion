@@ -41,6 +41,22 @@ try:
 except ImportError:
     _MEMORY_HANDLERS = {}
 
+from .brvm_tools import (
+    brvm_stock_picker_tool,
+    brvm_stock_analysis_tool,
+    brvm_market_overview_tool,
+    brvm_income_portfolio_tool,
+    brvm_kronos_predict_tool
+)
+
+_BRVM_HANDLERS = {
+    "brvm_stock_picker": brvm_stock_picker_tool,
+    "brvm_stock_analysis": brvm_stock_analysis_tool,
+    "brvm_market_overview": brvm_market_overview_tool,
+    "brvm_income_portfolio": brvm_income_portfolio_tool,
+    "brvm_kronos_predict": brvm_kronos_predict_tool,
+}
+
 ALL_HANDLERS = {
     **_FILE_HANDLERS,
     **_CODE_HANDLERS,
@@ -59,6 +75,7 @@ ALL_HANDLERS = {
     **_TRADING_HANDLERS,
     **_VOICE_HANDLERS,
     **_KRONOS_HANDLERS,
+    **_BRVM_HANDLERS,
     **_MACRO_HANDLERS,
     **_BACKUP_HANDLERS,
     **_MCP_HANDLERS,

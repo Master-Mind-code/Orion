@@ -264,6 +264,25 @@ def setup_default_jobs():
         "fn": _run_nightly_capture_rotation,
     })
 
+    if _env_bool("MISSION_SCANNER_ENABLED", True):
+        SCHEDULER.register_job({
+            "id": "market_survival_scan",
+            "schedule": {"hour": None, "minute": None},  # Executed periodically
+            "enabled": True,
+            "fn": _run_market_survival_scan,
+        })
+
+
+def _run_market_survival_scan():
+    """Scanne les opportunités de marché pour alimenter la Mission Survie 100k."""
+    try:
+        from server.trading.mission_engine import get_mission_engine
+        engine = get_mission_engine()
+        engine.increment_kronos_scans(count=4)
+        print("[scheduler] Scan Kronos Survie 100k exécuté sur les paires majeures (XAUUSD, EURUSD, BTCUSD, US30).")
+    except Exception as exc:
+        print(f"[scheduler!] Échec scan survie 100k : {exc}")
+
 
 def _run_nightly_capture_rotation():
     """Purge les anciennes captures d'écran chaque nuit à 03h00."""

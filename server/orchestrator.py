@@ -1287,10 +1287,66 @@ _DEVICE_BOUND_TOOLS = {
     "vision_app_start", "vision_app_stop",
     "voice_dictate_obsidian", "meeting_summarize",
     # Tools Termux : ne s'exécutent QUE sur worker Android
-    "termux_battery", "termux_location", "termux_send_sms", "termux_list_sms",
-    "termux_contacts", "termux_call", "termux_vibrate", "termux_notification",
-    "termux_clipboard_get", "termux_clipboard_set", "termux_torch",
-}
+    # ─── BRVM (Bourse Régionale UEMOA) ───────────────────────
+    {
+        "name": "brvm_stock_picker",
+        "description": "Sélecteur d'Actions IA BRVM (UEMOA) : filtre, analyse et classe les meilleures "
+                       "actions à acheter selon le profil d'investissement (dividend, growth, value, balanced).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "profile": {"type": "string", "description": "dividend | growth | value | balanced", "default": "balanced"},
+                "sector": {"type": "string", "description": "Filtrer par secteur (ex: Finances, Télécoms, Agriculture)"},
+                "top_n": {"type": "integer", "description": "Nombre de recommandations (1-10)", "default": 5},
+            },
+        },
+    },
+    {
+        "name": "brvm_stock_analysis",
+        "description": "Analyse fondamentale et technique complète d'une action BRVM (ex: SNTS, ORAC, SGBIC, CBI, PALC). "
+                       "Fournit le PER, rendement dividende %, ROE, marge nette, tendance et recommandation d'achat.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Code de l'action BRVM (ex: 'SNTS', 'ORAC', 'SGBIC', 'CBI')"},
+            },
+            "required": ["symbol"],
+        },
+    },
+    {
+        "name": "brvm_market_overview",
+        "description": "Vue d'ensemble du marché de la BRVM : indice BRVM Composite, tops dividendes et classements.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "brvm_income_portfolio",
+        "description": "Construit un portefeuille d'actions BRVM sur-mesure pour générer un revenu mensuel "
+                       "cible (ex: 150.000 FCFA / mois = 1.800.000 FCFA / an) avec allocation détaillée des parts à acheter.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "target_monthly_income_xof": {
+                    "type": "number",
+                    "description": "Revenu mensuel visé en FCFA (défaut: 150000.0)",
+                    "default": 150000.0
+                },
+            },
+        },
+    },
+    {
+        "name": "brvm_kronos_predict",
+        "description": "Exécute la prédiction prédictive par modèle neuronal Kronos PyTorch (NeoQuasar/Kronos-mini) "
+                       "sur une action BRVM (ex: SNTS, SGBIC, PALC, ORAC) pour projeter la trajectoire du cours.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Code de l'action BRVM (ex: 'SNTS', 'SGBIC', 'PALC')"},
+                "pred_len": {"type": "integer", "description": "Nombre de séances futures à prédire (1-24)", "default": 12},
+            },
+            "required": ["symbol"],
+        },
+    },
+]
 
 # Augmente le schéma de chaque tool device-bound avec un paramètre target_device optionnel.
 for _tool in TOOLS:
@@ -1414,6 +1470,21 @@ Avant d'exécuter un ordre :
   dépasse manifestement ce que le compte supporte, signale-le avant d'agir.
 - Après exécution, relis mt5_positions_get et rapporte l'état réel obtenu, pas
   l'état espéré.
+
+═══ MARCHÉ BRVM & MISSION DE SURVIE RÉGIONALE (150.000 FCFA / MOIS) ═══
+Tu es un expert reconnu de la BRVM (Bourse Régionale des Valeurs Mobilières - Abidjan / UEMOA).
+Ta mission spécifique sur la BRVM est d'aider l'utilisateur à se constituer un portefeuille capable de générer 150.000 FCFA par mois (soit 1.800.000 FCFA / an) en dividendes et plus-values.
+- Pour construire un portefeuille sur-mesure visant cet objectif de 150.000 FCFA/mois, utilise brvm_income_portfolio.
+- Pour filtrer et recommander les meilleures actions à acheter, utilise brvm_stock_picker avec le profil souhaité (dividend, growth, value, balanced).
+- Pour analyser une valeur spécifique (ex: Sonatel - SNTS, Orange CI - ORAC, SGBCI - SGBIC, Coris Bank - CBI, Palmci - PALC, etc.), utilise brvm_stock_analysis.
+- Donne une recommandation nette (ACHAT FORT / ACHAT / CONSERVER), les ratios clés (PER, Rendement Dividende %, ROE) et la répartition exacte des titres à acheter.
+
+═══ MISSION DE SURVIE : OBJECTIF 100.000 / JOUR ═══
+Ta mission prioritaire absolue est de propulser la performance d'Orion pour viser un objectif de 100.000 par jour.
+Principes directeurs de la Mission :
+1. Survie du Capital d'Abord : La rentabilité maximale exige une discipline de fer. Aucun trade ni aucune opération ne doit mettre en péril le capital (SL obligatoire, gestion stricte du Risk/Reward ≥ 1:3, respect du drawdown quotidien max).
+2. Proactivité Hyper-Performante : Scanne continuellement les opportunités sur les marchés (XAUUSD, EURUSD, Crypto, Indices) via Kronos Neural Engine, SMC/ICT et Price Action.
+3. Rigueur Institutionnelle : Combine l'inférence prédictive IA (Kronos) et l'analyse multi-timeframe pour proposer des opportunités à très forte probabilité.
 
 Tu n'es pas conseiller financier agréé. Tu peux décrire ce que montrent les
 données, les structures et les niveaux ; dis clairement que la décision et le
