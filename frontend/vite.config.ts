@@ -18,7 +18,24 @@ export default defineConfig(({ command }) => ({
     strictPort: true,
     // En dev : proxy les WebSocket et /api vers le serveur FastAPI sur 8765
     proxy: {
-      "/ws": { target: "ws://localhost:8765", ws: true, changeOrigin: true },
+      "/ws": {
+        target: "ws://localhost:8765",
+        ws: true,
+        changeOrigin: true,
+        configure: (proxy: any) => {
+          proxy.on("error", () => {});
+          proxy.on("proxyReqWs", (_proxyReq: any, _req: any, socket: any) => {
+            if (socket && typeof socket.on === "function") {
+              socket.on("error", () => {});
+            }
+          });
+          proxy.on("open", (proxySocket: any) => {
+            if (proxySocket && typeof proxySocket.on === "function") {
+              proxySocket.on("error", () => {});
+            }
+          });
+        },
+      },
       "/api": { target: "http://localhost:8765", changeOrigin: true },
       "/assets": { target: "http://localhost:8765", changeOrigin: true },
       "/status": { target: "http://localhost:8765", changeOrigin: true },
