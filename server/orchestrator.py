@@ -1266,27 +1266,6 @@ TOOLS = [
                        "ou tv_* échoue, pour savoir si le serveur est vivant.",
         "input_schema": {"type": "object", "properties": {}},
     },
-]
-
-# Tools qui interagissent avec le matériel/OS et acceptent un target_device.
-# (web_search, fetch_url, list_connected_devices, gmail_*, calendar_*,
-#  generate_image, memory_* ne sont pas device-bound : ils tournent sur le serveur.)
-_DEVICE_BOUND_TOOLS = {
-    "create_file", "read_file", "list_directory", "delete_file", "create_directory",
-    "move_file", "run_shell_command", "run_python_script", "get_system_info",
-    "open_app", "open_url_in_browser", "list_running_processes",
-    # Nouveaux device-bound
-    "notify", "notify_telegram", "screenshot", "list_monitors", "read_pdf", "read_docx",
-    "mouse_position", "mouse_move", "mouse_click", "keyboard_type", "keyboard_press",
-    "automation_status", "mouse_drag", "mouse_scroll", "keyboard_key",
-    "clipboard_get", "clipboard_set", "clipboard_history_get", "clipboard_history_clear",
-    "list_windows", "focus_window", "window_control", "window_watch",
-    "screen_ocr", "macro_record_start", "macro_record_stop", "macro_action_add", "macro_play", "macro_list", "macro_delete",
-    "camera_status", "camera_look", "camera_snapshot", "camera_gesture",
-    "camera_watch", "camera_read_document", "face_enroll", "face_list", "face_delete",
-    "vision_app_start", "vision_app_stop",
-    "voice_dictate_obsidian", "meeting_summarize",
-    # Tools Termux : ne s'exécutent QUE sur worker Android
     # ─── BRVM (Bourse Régionale UEMOA) ───────────────────────
     {
         "name": "brvm_stock_picker",
@@ -1347,6 +1326,27 @@ _DEVICE_BOUND_TOOLS = {
         },
     },
 ]
+
+# Tools qui interagissent avec le matériel/OS et acceptent un target_device.
+# (web_search, fetch_url, list_connected_devices, gmail_*, calendar_*,
+#  generate_image, memory_* ne sont pas device-bound : ils tournent sur le serveur.)
+_DEVICE_BOUND_TOOLS = {
+    "create_file", "read_file", "list_directory", "delete_file", "create_directory",
+    "move_file", "run_shell_command", "run_python_script", "get_system_info",
+    "open_app", "open_url_in_browser", "list_running_processes",
+    # Nouveaux device-bound
+    "notify", "notify_telegram", "screenshot", "list_monitors", "read_pdf", "read_docx",
+    "mouse_position", "mouse_move", "mouse_click", "keyboard_type", "keyboard_press",
+    "automation_status", "mouse_drag", "mouse_scroll", "keyboard_key",
+    "clipboard_get", "clipboard_set", "clipboard_history_get", "clipboard_history_clear",
+    "list_windows", "focus_window", "window_control", "window_watch",
+    "screen_ocr", "macro_record_start", "macro_record_stop", "macro_action_add", "macro_play", "macro_list", "macro_delete",
+    "camera_status", "camera_look", "camera_snapshot", "camera_gesture",
+    "camera_watch", "camera_read_document", "face_enroll", "face_list", "face_delete",
+    "vision_app_start", "vision_app_stop",
+    "voice_dictate_obsidian", "meeting_summarize",
+    # Tools Termux : ne s'exécutent QUE sur worker Android
+}
 
 # Augmente le schéma de chaque tool device-bound avec un paramètre target_device optionnel.
 for _tool in TOOLS:
