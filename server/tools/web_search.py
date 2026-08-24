@@ -68,6 +68,42 @@ def _brave_search(query: str, max_results: int = 5, api_key: str = "") -> list:
     return results
 
 
+def _duckduckgo_html_search(query: str, max_results: int = 5) -> list:
+    """Recherche web réelle via DuckDuckGo HTML (gratuite, sans clé API)."""
+    encoded = urllib.parse.quote(query)
+    url = f"https://html.duckduckgo.com/html/?q={encoded}"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    })
+    results = []
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode("utf-8", errors="replace")
+
+        blocks = re.findall(r'<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>.*?(?:<a[^>]+class="result__snippet"[^>]*>|<td[^>]+class="result__snippet"[^>]*>)(.*?)(?:</a>|</td>)', html, re.DOTALL | re.IGNORECASE)
+
+        for href, raw_title, raw_snippet in blocks[:max_results]:
+            title = re.sub(r"<[^>]+>", "", raw_title).strip()
+            snippet = re.sub(r"<[^>]+>", "", raw_snippet).strip()
+            real_url = href
+            if "uddg=" in href:
+                parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                if "uddg" in parsed:
+                    real_url = parsed["uddg"][0]
+
+            if title and snippet:
+                results.append({
+                    "title": title,
+                    "snippet": snippet,
+                    "url": real_url,
+                    "source": "DuckDuckGo Web"
+                })
+    except Exception as e:
+        print(f"[web_search] Erreur DuckDuckGo HTML: {e}")
+
+    return results
+
+
 def web_search(query: str, max_results: int = 5) -> dict:
     """Point d'entrée principal pour la recherche web."""
     brave_key = os.getenv("BRAVE_API_KEY", "")
@@ -76,6 +112,8 @@ def web_search(query: str, max_results: int = 5) -> dict:
             results = _brave_search(query, max_results, brave_key)
         else:
             results = _duckduckgo_search(query, max_results)
+            if not results:
+                results = _duckduckgo_html_search(query, max_results)
 
         if not results:
             return {

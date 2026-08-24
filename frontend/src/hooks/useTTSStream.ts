@@ -34,13 +34,17 @@ function cleanForSpeech(text: string): string {
  * réception (streaming LLM). Dès qu'on a une phrase complète (terminée par
  * `.!?…`), on l'envoie à SpeechSynthesisUtterance qui s'enchaîne sans gap.
  */
-export function useTTSStream() {
+export function useTTSStream(onEnd?: () => void) {
   const accRef = useRef("");
   const spokenIdxRef = useRef(0);
+  const activeUtterancesRef = useRef(0);
+  const onEndRef = useRef(onEnd);
+  onEndRef.current = onEnd;
 
   const reset = useCallback(() => {
     accRef.current = "";
     spokenIdxRef.current = 0;
+    activeUtterancesRef.current = 0;
     window.speechSynthesis?.cancel();
   }, []);
 
@@ -54,6 +58,23 @@ export function useTTSStream() {
     u.lang = "fr-FR";
     u.rate = 1.05;
     u.pitch = 1.0;
+
+    activeUtterancesRef.current += 1;
+
+    const checkFinished = () => {
+      activeUtterancesRef.current = Math.max(0, activeUtterancesRef.current - 1);
+      if (activeUtterancesRef.current === 0) {
+        setTimeout(() => {
+          if (!window.speechSynthesis?.speaking && activeUtterancesRef.current === 0) {
+            onEndRef.current?.();
+          }
+        }, 300);
+      }
+    };
+
+    u.onend = checkFinished;
+    u.onerror = checkFinished;
+
     window.speechSynthesis.speak(u);
   }, []);
 

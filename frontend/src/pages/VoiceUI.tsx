@@ -68,7 +68,22 @@ export function VoiceUI({ embedded, onStateChange, onModeChange,
   }, [embedded]);
 
   const { toasts, push: toast, dismiss } = useToasts();
-  const tts = useTTSStream();
+  const autoResumeTimeoutRef = useRef<number | null>(null);
+  const micStartRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleTTSFinished = useCallback(() => {
+    if (autoResumeTimeoutRef.current) window.clearTimeout(autoResumeTimeoutRef.current);
+    autoResumeTimeoutRef.current = window.setTimeout(() => {
+      window.speechSynthesis?.cancel();
+      setUserText("");
+      setToolHint("");
+      setOrionText("Je t'écoute.");
+      setState("listening");
+      void micStartRef.current?.();
+    }, 400);
+  }, []);
+
+  const tts = useTTSStream(handleTTSFinished);
 
   // Audio level via ref (la sphère lit en boucle, pas de re-render)
   const localAudioRef = useRef(0);
@@ -156,6 +171,7 @@ export function VoiceUI({ embedded, onStateChange, onModeChange,
       setVoicePct(Math.round(lvl * 100));
     },
   });
+  micStartRef.current = mic.start;
 
   // Quand on a un nouveau blob → upload
   useEffect(() => {
