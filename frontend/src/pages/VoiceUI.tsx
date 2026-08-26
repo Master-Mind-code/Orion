@@ -17,6 +17,7 @@ import {
   lireDeviceId, lireServerUrl, lireToken,
 } from "@/lib/credentials";
 import type { EmbeddedViewProps } from "@/components/cockpit/embed";
+import { OrionResponseBox } from "@/components/cockpit/OrionResponseBox";
 
 const STATE_LABELS: Record<SphereState, string> = {
   idle: "STANDBY",
@@ -341,22 +342,20 @@ export function VoiceUI({ embedded, onStateChange, onModeChange,
           </div>
         </div>}
 
-        <div className="relative z-[4] mt-6 w-full max-w-[720px] min-h-[100px]
-                        flex flex-col gap-2.5 text-center">
-          {userText && (
-            <div className="font-space text-sm leading-snug py-2 text-text-dim italic">
-              <span className="text-cyan">« </span>{userText}<span className="text-cyan"> »</span>
-            </div>
-          )}
-          <div className="font-space text-base font-medium text-text leading-snug py-2">
-            {orionText}
-          </div>
-          {toolHint && (
-            <div className="font-mono text-[10px] tracking-[1.5px] text-gold uppercase">
-              {toolHint}
-            </div>
-          )}
+        <div className="relative z-[10] mt-4 w-full max-w-[680px]">
+          <OrionResponseBox
+            orionText={orionText}
+            userText={userText}
+            toolHint={toolHint}
+            state={state}
+            onClose={() => {
+              setUserText("");
+              setToolHint("");
+              setOrionText("Parle, je t'écoute.");
+            }}
+          />
         </div>
+
       </main>
 
       {!embedded && <MicButton

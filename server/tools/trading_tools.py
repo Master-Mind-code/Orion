@@ -113,6 +113,26 @@ def trading_backtest_results() -> dict:
     return backtest_get_results()
 
 
+def run_strategy_backtest(
+    symbol: str = "SONATEL",
+    initial_capital: float = 1000000.0,
+    strategy_type: str = "sma_crossover",
+    period_days: int = 60,
+    stop_loss_pct: float = 2.5,
+    take_profit_pct: float = 5.0,
+) -> dict:
+    """Exécute un backtest de stratégie d'investissement et retourne le win rate, le drawdown et les métriques de performance."""
+    from server.trading.backtester import run_backtest
+    return run_backtest(
+        symbol=symbol,
+        initial_capital=initial_capital,
+        strategy_type=strategy_type,
+        period_days=period_days,
+        stop_loss_pct=stop_loss_pct,
+        take_profit_pct=take_profit_pct,
+    )
+
+
 HANDLERS = {
     "trading_alert_create":     lambda p: trading_alert_create(**p),
     "trading_alert_list":       lambda p: trading_alert_list(),
@@ -122,4 +142,6 @@ HANDLERS = {
     "trading_backtest_start":   lambda p: trading_backtest_start(**p),
     "trading_backtest_step":    lambda p: trading_backtest_step(**p),
     "trading_backtest_results": lambda p: trading_backtest_results(),
+    "run_strategy_backtest":   lambda p: run_strategy_backtest(**p),
 }
+

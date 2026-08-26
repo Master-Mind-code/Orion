@@ -25,9 +25,12 @@ export default defineConfig(function (_a) {
                     changeOrigin: true,
                     configure: function (proxy) {
                         proxy.on("error", function () { });
-                        proxy.on("proxyReqWs", function (_proxyReq, _req, socket) {
+                        proxy.on("proxyReqWs", function (_proxyReq, req, socket) {
                             if (socket && typeof socket.on === "function") {
                                 socket.on("error", function () { });
+                            }
+                            if (req && req.socket && typeof req.socket.on === "function") {
+                                req.socket.on("error", function () { });
                             }
                         });
                         proxy.on("open", function (proxySocket) {

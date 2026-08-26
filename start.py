@@ -10,6 +10,7 @@ Modes :
   python start.py controller         → lance l'agent en mode chat controller (CLI distante)
   python start.py voice              → lance le service voix locale (STT+TTS, parle "hey orion")
   python start.py ui                 → ouvre seulement l'UI navigateur
+  python start.py stop               → arrête tous les processus Orion et libère les ports
   python start.py init               → liste les presets de configuration disponibles
   python start.py init --preset NAME → applique un preset (trading, voice, worker, google, minimal)
   python start.py install-startup    → active le démarrage auto Windows (mode server, sans UI)
@@ -90,9 +91,9 @@ configure_output()
 
 
 def banner():
-    print("═" * 60)
+    print("=" * 60)
     print("                O R I O N — Lanceur".center(60))
-    print("═" * 60)
+    print("=" * 60)
 
 
 def check_env():
@@ -649,6 +650,11 @@ def main():
 
     if cmd == "remove-startup":
         remove_windows_startup()
+        return
+
+    if cmd == "stop":
+        import stop
+        stop.main()
         return
 
     if cmd == "init":

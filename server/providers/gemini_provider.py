@@ -34,7 +34,7 @@ def _to_jsonable(obj):
 class GeminiProvider(Provider):
     name = "gemini"
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(self, model: str = "gemini-2.5-flash"):
         if not os.environ.get("GEMINI_API_KEY") and not os.environ.get("GOOGLE_API_KEY"):
             raise RuntimeError("GEMINI_API_KEY (ou GOOGLE_API_KEY) manquante dans .env")
         # Import paresseux : permet aux utilisateurs Anthropic-only de ne pas installer google-genai
@@ -46,11 +46,45 @@ class GeminiProvider(Provider):
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         self.client = genai.Client(api_key=api_key)
 
+    @staticmethod
+    def _sanitize_schema(raw_schema: dict) -> dict:
+        """Sanitise un schéma JSON Schema pour FunctionDeclaration (google.genai / Pydantic)."""
+        if not isinstance(raw_schema, dict):
+            return {"type": "object", "properties": {}}
+
+        def _clean(d):
+            if not isinstance(d, dict):
+                return d
+            res = {}
+            for k, v in d.items():
+                if k in ("$schema", "$id", "additionalProperties"):
+                    continue
+                if k in ("oneOf", "anyOf"):
+                    if isinstance(v, list) and v and isinstance(v[0], dict) and "type" in v[0]:
+                        res["type"] = v[0]["type"]
+                    else:
+                        res["type"] = "string"
+                    continue
+                if isinstance(v, dict):
+                    res[k] = _clean(v)
+                elif isinstance(v, list):
+                    res[k] = [_clean(x) for x in v]
+                else:
+                    res[k] = v
+            return res
+
+        cleaned = _clean(raw_schema)
+        if "type" not in cleaned:
+            cleaned["type"] = "object"
+        if "properties" not in cleaned and cleaned.get("type") == "object":
+            cleaned["properties"] = {}
+        return cleaned
+
     def _convert_tools(self, tools: list) -> list:
         types = self._types
         decls = []
         for t in tools:
-            schema = t.get("input_schema", {"type": "object", "properties": {}})
+            schema = self._sanitize_schema(t.get("input_schema", {"type": "object", "properties": {}}))
             decls.append(types.FunctionDeclaration(
                 name=t["name"],
                 description=t.get("description", ""),

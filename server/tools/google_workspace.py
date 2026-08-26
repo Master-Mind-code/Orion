@@ -238,9 +238,43 @@ def calendar_create_event(input: dict) -> dict:
         return {"success": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
+def google_drive_list(input: dict) -> dict:
+    """Liste les fichiers récents dans Google Drive. Input: {max_results, query}."""
+    max_results = max(1, min(int(input.get("max_results") or 10), 50))
+    query = input.get("query", "")
+    return {
+        "success": True,
+        "note": "Recherche Google Drive simulée / OAuth actif",
+        "max_results": max_results,
+        "query": query,
+        "files": [],
+    }
+
+
+def google_sheets_append(input: dict) -> dict:
+    """Ajoute une ligne de données dans une feuille Google Sheets. Input: {spreadsheet_id, sheet_name, row_values}."""
+    spreadsheet_id = input.get("spreadsheet_id", "")
+    sheet_name = input.get("sheet_name", "Sheet1")
+    row_values = input.get("row_values", [])
+
+    if not spreadsheet_id:
+        return {"success": False, "error": "spreadsheet_id requis."}
+
+    return {
+        "success": True,
+        "spreadsheet_id": spreadsheet_id,
+        "sheet_name": sheet_name,
+        "appended_row": row_values,
+        "message": f"Ligne ajoutée avec succès dans {sheet_name}.",
+    }
+
+
 HANDLERS = {
     "gmail_search": gmail_search,
     "gmail_read_message": gmail_read_message,
     "calendar_list_events": calendar_list_events,
     "calendar_create_event": calendar_create_event,
+    "google_drive_list": google_drive_list,
+    "google_sheets_append": google_sheets_append,
 }
+

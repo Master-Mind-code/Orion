@@ -28,7 +28,7 @@ def get_provider(name: str = None) -> Provider:
 
     if name == "gemini":
         from .gemini_provider import GeminiProvider
-        model = get_env("GEMINI_MODEL", "gemini-2.0-flash")
+        model = get_env("GEMINI_MODEL", "gemini-2.5-flash")
         return GeminiProvider(model=model)
 
     if name == "ollama":

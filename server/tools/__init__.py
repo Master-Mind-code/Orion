@@ -57,6 +57,13 @@ _BRVM_HANDLERS = {
     "brvm_kronos_predict": brvm_kronos_predict_tool,
 }
 
+from .system_monitor import HANDLERS as _SYS_MONITOR_HANDLERS
+from .alerts import HANDLERS as _ALERTS_HANDLERS
+from .routine_tools import HANDLERS as _ROUTINE_HANDLERS
+from .rpa_macro import HANDLERS as _RPA_HANDLERS
+from .deep_research import HANDLERS as _RESEARCH_HANDLERS
+from server.multi_agent import HANDLERS as _MULTI_AGENT_HANDLERS
+
 ALL_HANDLERS = {
     **_FILE_HANDLERS,
     **_CODE_HANDLERS,
@@ -82,5 +89,12 @@ ALL_HANDLERS = {
     **_GOOGLE_HANDLERS,
     **_IMAGE_HANDLERS,
     **_MEMORY_HANDLERS,
+    **_SYS_MONITOR_HANDLERS,
+    **_ALERTS_HANDLERS,
+    **_ROUTINE_HANDLERS,
+    **_RPA_HANDLERS,
+    **_RESEARCH_HANDLERS,
+    **_MULTI_AGENT_HANDLERS,
 }
+
 

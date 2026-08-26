@@ -141,11 +141,12 @@ export function CockpitUI() {
              le bloc conteneur des enfants `fixed` (toasts, modal). ── */}
       {mode === "voice" && (
         <div className="pointer-events-auto absolute inset-x-0 mx-auto text-center"
-             style={{ top: "72%", width: "44%" }}>
+             style={{ top: "58%", width: "50%", maxWidth: "680px" }}>
           <VoiceUI embedded onStateChange={handleState} onModeChange={setMode}
                    audioLevelRef={audioLevelRef} />
         </div>
       )}
+
 
       {/* ── Trading : pleine surface, les cartes du deck portent deja leur
              propre chrome ; un panneau de verre par-dessus ferait doublon. ── */}
