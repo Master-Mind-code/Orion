@@ -64,6 +64,11 @@ from .rpa_macro import HANDLERS as _RPA_HANDLERS
 from .deep_research import HANDLERS as _RESEARCH_HANDLERS
 from server.multi_agent import HANDLERS as _MULTI_AGENT_HANDLERS
 
+from .crea_design import HANDLERS as _CREA_HANDLERS
+from .ecommerce_chariow import HANDLERS as _CHARIOW_HANDLERS
+from .video_producer import HANDLERS as _VIDEO_HANDLERS
+from .app_qa_tester import HANDLERS as _QA_HANDLERS
+
 ALL_HANDLERS = {
     **_FILE_HANDLERS,
     **_CODE_HANDLERS,
@@ -95,6 +100,11 @@ ALL_HANDLERS = {
     **_RPA_HANDLERS,
     **_RESEARCH_HANDLERS,
     **_MULTI_AGENT_HANDLERS,
+    **_CREA_HANDLERS,
+    **_CHARIOW_HANDLERS,
+    **_VIDEO_HANDLERS,
+    **_QA_HANDLERS,
 }
+
 
 
