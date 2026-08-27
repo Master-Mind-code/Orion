@@ -124,35 +124,42 @@ gardent l'ouverture de l'interface, le vrai contrôle d'accès reste
 
 ---
 
-## Capacités
+## Capacités (133 Outils Natifs)
 
 **Fichiers et système** — créer, lire, modifier, supprimer, déplacer ; commandes
-shell ; scripts Python ; processus ; informations système.
+shell ; scripts Python ; processus ; informations système (`get_system_metrics`, `list_running_processes`).
 
-**Web** — recherche (Brave ou DuckDuckGo), lecture de pages.
+**Création Visuelle & Canva IA** — bannières publicitaires, créas marketing, visuels réseaux sociaux via IA d'image (Imagen 3) et automatisation de design Canva (`generate_marketing_visual`, `canva_automation_create`).
 
-**Documents** — PDF, DOCX, vision sur images.
+**E-Commerce Chariow & Facebook Ads** — gestion complète de la boutique Chariow (produits, stock, commandes) et automatisation de campagnes publicitaires Meta / Facebook Ads (`chariow_manage_store`, `facebook_ads_manager`).
 
-**Bureau** — captures, souris (déplacement, clic, glisser, molette), clavier
-(frappe, combinaisons), fenêtres (lister, activer, réduire, agrandir, déplacer,
-fermer), presse-papier.
+**Producteur Vidéo IA Réaliste** — production et montage autonome de vidéos marketing réalistes avec voix-off (Kokoro/TTS), clips IA et sous-titres animés au format vertical Reels/TikTok/Shorts (`generate_ai_video`, `create_video_ad_campaign`).
 
-**Google Workspace** — Gmail et Calendar via OAuth.
+**Agent Testeur QA E2E d'Applications** — automation de tests fonctionnels et d'interface de bout en bout sur vos applications web/desktop et génération de rapports d'audit QA d'excellence (`run_app_e2e_test`, `generate_qa_bug_report`).
+
+**Deep Research & Web** — recherche multi-sources récursive avec synthèse documentaire structurée (`run_deep_research`), lecture de pages web (`fetch_url`), moteurs DuckDuckGo / Brave Search.
+
+**Google Workspace Extended** — Gmail, Calendar, fichiers Google Drive (`google_drive_list`) et insertion de lignes dans Google Sheets (`google_sheets_append`).
+
+**Routines, RPA Bureau & Multi-Agents** — planification de tâches récurrentes (`create_routine`), enregistreur et rejoueur de macros physiques sur le bureau (`add_macro_step`, `play_macro`), sous-agents spécialisés (`delegate_subagent_task`).
+
+**Documents & Vision** — PDF, DOCX, analyse multimodale d'images, reconnaissance faciale locale et gestes caméra (`camera_vision.py`).
+
+**Bureau** — captures, souris, clavier, fenêtres Windows, presse-papier.
 
 **Mémoire** — mémoire long terme vectorielle (RAG).
-
-**Mobile** — outils Termux sur Android en mode worker.
 
 **Trading & Mission de Survie** —
 - **Mission de Survie (100.000 / jour)** : Mode haute performance axé sur l'optimisation financière du capital. Suivi du P&L quotidien en temps réel, score de santé du capital (*Health Score* 0-100%), limites de drawdown quotidien et bascule automatique en *Cooldown*, widget HUD dédié sur le cockpit/dashboard.
 - **Analyse & Sélecteur d'Actions BRVM (150.000 FCFA / mois)** : Analyse fondamentale (PER, Rendement des dividendes %, ROE %, Marge Nette %) et technique des valeurs cotées sur la BRVM (Bourse Régionale des Valeurs Mobilières - UEMOA / Abidjan). Générateur automatique de portefeuille de rendement/croissance ciblé sur-mesure (Sonatel - SNTS, SGBCI - SGBIC, Orange CI - ORAC, Coris Bank - CBI, Palmci - PALC, etc.).
 - **Inférence Neuronal Kronos pour la BRVM** : Modèle neuronal PyTorch autorégressif (*NeoQuasar/Kronos-mini*) projetant la trajectoire K-lines des actions de la zone UEMOA, les cours cibles en FCFA et les probabilités de tendance.
-- **Tools natifs** : `brvm_stock_picker`, `brvm_stock_analysis`, `brvm_market_overview`, `brvm_income_portfolio`, `brvm_kronos_predict`.
+- **Backtesting & Alertes Multi-Canal** : Moteur de simulation historique de stratégies (`run_strategy_backtest`) et diffusion d'alertes instantanées sur Telegram, Discord et Email (`send_alert_notification`).
 - **MetaTrader 5 & TradingView** : Analyseur Claude branché sur MT5 via l'EA `EA/OrionTrader.mq5` et pont MCP pour TradingView, dashboard dédié.
 
 **Pont MCP** — Orion consomme n'importe quel serveur MCP externe comme des outils
 natifs. Voir `mcp_servers.example.json` : TradingView (22 outils) et MetaTrader 5
 (10 outils) sont préconfigurés.
+
 
 ---
 

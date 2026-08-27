@@ -1,7 +1,7 @@
-# Manuel Magistral des Capacités d'Orion — Édition Master
+# Manuel Magistral des Capacités d'Orion — Édition Master v3.0
 
-> **Version Système** : Orion v2.0 (Master-Mind Architecture)  
-> **Statut Opérationnel** : Actif & Déployé  
+> **Version Système** : Orion v3.0 (Master-Mind Architecture)  
+> **Statut Opérationnel** : Actif & Déployé (133 Outils Natifs)  
 > **Dernière Mise à Jour** : 2026  
 > **Auteur & Conception** : Équipe Advanced Agentic Coding
 
@@ -18,17 +18,25 @@
 7. [Service Vocal Immersif & Biométrie Locale](#7-service-vocal-immersif--biométrie-locale)
 8. [Pont Inter-Processus MCP (TradingView & MetaTrader 5)](#8-pont-inter-processus-mcp-tradingview--metatrader-5)
 9. [Architecture de Sécurité, Audit & Mode Panic](#9-architecture-de-sécurité-audit--mode-panic)
-10. [Catalogue Exhaustif des Outils Natifs (Sitemap System)](#10-catalogue-exhaustif-des-outils-natifs-sitemap-system)
+10. [Studio de Création Visuelle, Canva & IA Marketing](#10-studio-de-création-visuelle-canva--ia-marketing)
+11. [Gestion E-Commerce Chariow & Facebook Ads Manager](#11-gestion-e-commerce-chariow--facebook-ads-manager)
+12. [Producteur & Générateur de Vidéos IA Réalistes](#12-producteur--générateur-de-vidéos-ia-réalistes)
+13. [Agent Testeur QA E2E d'Applications par Excellence](#13-agent-testeur-qa-e2e-dapplications-par-excellence)
+14. [Deep Research Web Multi-Sources & Document Cloud](#14-deep-research-web-multi-sources--document-cloud)
+15. [Routines Automatiques, RPA Bureau & Multi-Agents](#15-routines-automatiques-rpa-bureau--multi-agents)
+16. [Backtesting de Stratégies Financières & Alertes Multi-Canal](#16-backtesting-de-stratégies-financières--alertes-multi-canal)
+17. [Cockpit 3D WebGL & Boîte de Réponse HUD Holographique](#17-cockpit-3d-webgl--boîte-de-réponse-hud-holographique)
+18. [Catalogue Exhaustif des Outils Natifs (Sitemap System)](#18-catalogue-exhaustif-des-outils-natifs-sitemap-system)
 
 ---
 
 ## 1. Vue d'Ensemble & Philosophie de l'IA Autonome
 
-**Orion** est un assistant IA personnel de classe souveraine et autonome, conçu pour fonctionner directement sur l'appareil de l'utilisateur. Contrairement aux agents conversationnels passifs, Orion est doté de capacités d'action directe : il interagit avec le système d'exploitation, manipule les fichiers, exécute des scripts, pilote les fenêtres graphiques, analyse les flux financiers internationaux et régionaux, et surveille les marchés en continu.
+**Orion** est un assistant IA personnel de classe souveraine et autonome, conçu pour fonctionner directement sur l'appareil de l'utilisateur. Contrairement aux agents conversationnels passifs, Orion est doté de capacités d'action directe : il interagit avec le système d'exploitation, manipule les fichiers, exécute des scripts, pilote les fenêtres graphiques, analyse les flux financiers internationaux et régionaux, gère des boutiques e-commerce, produit du contenu multimédia et surveille les marchés en continu.
 
 ### Principes Fondeurs :
 - **Survie du Capital & Discipline Absolue** : Rigueur d'exécution maximale. Aucun compromis sur la gestion du risque.
-- **Proactivité Autonome** : Orion n'attend pas des instructions pas-à-pas ; il planifie, analyse et exécute les sous-tâches jusqu'à l'atteinte de l'objectif final.
+- **Proactivity Autonome** : Orion n'attend pas des instructions pas-à-pas ; il planifie, analyse et exécute les sous-tâches jusqu'à l'atteinte de l'objectif final.
 - **Exécution Souveraine Locale** : Les données sensibles, les visages biométriques et les clés d'API restent sous le contrôle strict de la machine hôte.
 
 ---
@@ -58,15 +66,15 @@ L'architecture d'Orion s'articule autour d'un serveur central FastAPI + WebSocke
               │                        │
               ▼                        ▼
    ┌────────────────────┐   ┌────────────────────┐
-   │ Tools Natifs System│   │ BRVM & Kronos      │
-   │ (File/Automation)  │   │ Neural Engine      │
+   │ 133 Tools Natifs   │   │ BRVM & Kronos      │
+   │ (File/QA/Video/Ads)│   │ Neural Engine      │
    └────────────────────┘   └────────────────────┘
 ```
 
 ### Composants Clés :
-1. **Orchestrateur Central (`server/orchestrator.py`)** : Reçoit le flux de requêtes, formule les plans d'actions, effectue le routage des outils natifs et gère les boucles d'itération (jusqu'à 25 itérations autonomes par demande).
+1. **Orchestrateur Central (`server/orchestrator.py`)** : Reçoit le flux de requêtes, formule les plans d'actions, effectue le routage des 133 outils natifs et gère les boucles d'itération (jusqu'à 25 itérations autonomes par demande).
 2. **Fournisseurs de LLM Interchangeables (`server/providers/`)** : Bascule transparente entre Anthropic Claude (Haiku, Sonnet, Opus) et Google Gemini.
-3. **Cockpit 3D & Capsule Flottante (`desktop/`, `frontend/`)** : Interface futuriste WebGL en 4 modes (Voix, Trading, Bureau, Système) avec réacteur réactif et raccourci système global **Ctrl+Alt+O**.
+3. **Cockpit 3D & Boîte HUD Holographique (`frontend/src/`)** : Interface futuriste WebGL en 4 modes (Voix, Trading, Bureau, Système) avec réacteur réactif et boîte de réponse `OrionResponseBox` biseautée en verre blindé.
 4. **Agents Workers Distants (`agent/agent.py`)** : Permet à un serveur central d'exécuter des outils sur d'autres appareils distants (smartphones Android via Termux, PC distants).
 
 ---
@@ -87,31 +95,11 @@ Pour maximiser la création de valeur et l'efficacité d'Orion, une directive sy
 
 Orion est équipé d'un moteur expert dédié à la **BRVM (Bourse Régionale des Valeurs Mobilières de l'UEMOA - Abidjan)**.
 
-```
-                           ┌───────────────────────────┐
-                           │ Base Financière BRVM      │
-                           │ (data/brvm_stocks.json)   │
-                           └─────────────┬─────────────┘
-                                         │
-                                         ▼
-                           ┌───────────────────────────┐
-                           │   BRVMEngine (Scoring)    │
-                           │ PER + Yield + ROE + Tech  │
-                           └─────────────┬─────────────┘
-                                         │
-                 ┌───────────────────────┼───────────────────────┐
-                 ▼                       ▼                       ▼
-    ┌────────────────────────┐ ┌───────────────────┐ ┌──────────────────────┐
-    │ brvm_income_portfolio  │ │ brvm_stock_picker │ │ brvm_stock_analysis  │
-    │ (Target 150k FCFA/mois)│ │ (Profils d'achat) │ │ (Fiche d'action)     │
-    └────────────────────────┘ └───────────────────┘ └──────────────────────┘
-```
-
 ### Capacités Majeures BRVM :
 - **Base de Données Régionale Enrichie (`data/brvm_stocks.json`)** : Données fondamentales et financières complètes pour l'ensemble de la cote (Sonatel, SGBCI, Orange CI, Coris Bank, Palmci, Total CI, Sodeci, CIE, Solibra, Onatel BF, etc.).
 - **Calcul du Orion Score BRVM (0-100)** : Évaluation croisée du rendement dividende (Yield %), de la sous-évaluation (PER), de la rentabilité des capitaux (ROE %) et du momentum de prix.
-- **Portefeuille de Revenu Cible (150.000 FCFA / mois)** : `brvm_income_portfolio` calcule le nombre exact d'actions à acheter parmi les champions régionaux pour générer 1.800.000 FCFA / an de dividendes récurrents (ex: allocation équilibrée Palmci + SGBCI + Ecobank + Coris Bank + Onatel BF pour un rendement annuel net moyen de **10.16%**).
-- **Sélecteur d'Actions par Profil (`brvm_stock_picker`)** : Classement instantané selon 4 stratégies : `dividend` (rendement passif), `growth` (croissance), `value` (décote), `balanced` (équilibré).
+- **Portefeuille de Revenu Cible (150.000 FCFA / mois)** : `brvm_income_portfolio` calcule le nombre exact d'actions à acheter parmi les champions régionaux pour générer 1.800.000 FCFA / an de dividendes récurrents.
+- **Sélecteur d'Actions par Profil (`brvm_stock_picker`)** : Classement instantané selon 4 stratégies : `dividend`, `growth`, `value`, `balanced`.
 
 ---
 
@@ -119,110 +107,156 @@ Orion est équipé d'un moteur expert dédié à la **BRVM (Bourse Régionale de
 
 Orion intègre le modèle de fondation neuronal **Kronos PyTorch (NeoQuasar/Kronos-mini)**, spécialisé dans la prédiction de séries temporelles K-lines et l'analyse quantique de marché.
 
-### Inférence & Algorithmes :
-- **Tokenizer BSQuantizer + Transformer Autorégressif** : Discrétise les variations de prix OHLCV et de volumes pour projeter les trajectoires futures.
-- **Inférence Multi-Marchés & BRVM (`brvm_kronos_predict`)** : Génère des simulations de bougies K-lines pour prédire le cours cible en FCFA des actions africaines et la probabilité de tendance (confiance %).
-- **Simulations Monte-Carlo (`KronosEngine.run_monte_carlo_simulations`)** : Génère 10 à 100 trajectoires stochastiques pour déterminer l'enveloppe de prix (percentiles 10%, 50%, 90%).
-
 ---
 
 ## 6. Pilotage Physique du Bureau & Vision Synthétique
 
-Orion peut interagir physiquement avec le système d'exploitation comme le ferait un opérateur humain.
-
-### Modules d'Automation (`server/tools/automation.py`, `windows_ctrl.py`) :
-- **Souris** : Déplacement absolu/relatif, clic gauche/droit/double, glisser-déposer (*drag & drop*), molette.
-- **Clavier** : Saisie de texte avec gestion du presse-papier pour préserver les accents français, combinaisons de touches (`Ctrl+C`, `Ctrl+V`, `Alt+Tab`).
-- **Fenêtres Windows** : Lister les fenêtres actives, basculer au premier plan, réduire, agrandir, déplacer, redimensionner et fermer proprement.
-- **Vision par Découpage de Région (`screenshot`)** : Capture de l'écran ou de sous-régions précises à l'échelle 1.0 pour viser des éléments graphiques au pixel près.
-- **Analyse d'Image par IA (`analyze_image`)** : Utilisation de modèles de vision multimodaux pour lire le texte à l'écran, analyser un schéma ou diagnostiquer une erreur système.
+Orion peut interagir physiquement avec le système d'exploitation comme le ferait un opérateur humain (Souris, Clavier, Fenêtres Windows, Capture de Région, Analyse Multimodale).
 
 ---
 
 ## 7. Service Vocal Immersif & Biométrie Locale
 
-Orion propose une expérience vocale naturelle sans dépendre d'un service cloud tiers pour le traitement de la parole.
-
-### Pipeline Vocal (`server/voice/`, `voice/`) :
-- **Reconnaissance Vocale (STT)** : OpenAI Whisper local.
-- **Synthèse Vocale Naturelle (TTS)** : Modèle Kokoro TTS à haut débit.
-- **Détection d'Activité Vocale (VAD)** : Filtrage automatique du bruit et des silences.
-- **Wake Word ("Hey Orion")** : Écoute continue en arrière-plan.
-
-### Biométrie & Vision par Caméra (`server/tools/camera_vision.py`) :
-- **Reconnaissance Faciale Locale (`face_enroll`, `face_list`, `face_delete`)** : Base de données biométrique 100% locale stockée dans `data/known_faces/`.
-- **Détection de Gestes (`camera_gesture`)** : Lecture des gestes de la main (poing, main ouverte, pouce levé, nombre de doigts).
-- **Applications de Surveillance (`vision_app_start`)** : Somnolence au volant, intrusion, comptage de franchissement de ligne.
+- **OpenAI Whisper local** (STT), **Kokoro TTS** (voix naturelle), **VAD** et Wake Word ("Hey Orion").
+- **Biométrie faciale locale** et détection de gestes de la main par vision synthétique (`camera_vision.py`).
 
 ---
 
 ## 8. Pont Inter-Processus MCP (TradingView & MetaTrader 5)
 
-Orion implémente le protocole universel **Model Context Protocol (MCP)** via un bridge stdio générique (`server/mcp_bridge/`).
-
-### Intégration Native des Serveurs MCP :
-- **TradingView (22 Outils MCP)** : Contrôle direct de l'application TradingView Desktop via Chrome DevTools Protocol (CDP). Lecture des graphiques, dessin de lignes de tendance, création d'alertes de prix.
-- **MetaTrader 5 (10 Outils MCP)** : Connexion directe au terminal MT5. Lecture des données de tick, cotations temps réel (`mt5_quote`), positions ouvertes (`mt5_positions_get`), envoi d'ordres de marché avec pré-validation obligatoire (`mt5_order_send`).
+Bridge stdio générique consommant les serveurs MCP externes : TradingView (22 outils) et MetaTrader 5 (10 outils).
 
 ---
 
 ## 9. Architecture de Sécurité, Audit & Mode Panic
 
-Parce qu'Orion possède des droits d'action physique et financière, la sécurité est assurée par 8 couches superposées.
-
-| Couche | Description & Fonctionnement |
-|---|---|
-| **`ORION_SECRET_TOKEN`** | Jetons d'authentification obligatoires pour chaque WebSocket et API HTTP. |
-| **`ORION_CONFIRM_PASSWORD`** | Mot de passe requis avant l'exécution de tout outil destructif ou sensible. |
-| **`ORION_AUTOMATION_ENABLED`** | Interrupteur matériel autorisant ou bloquant le contrôle physique de la souris/clavier. |
-| **`ORION_TRADING_EXECUTION_ENABLED`** | Interrupteur indépendant dédié à l'exécution d'ordres réels en bourse. |
-| **Mode Panic (`POST /api/panic`)** | Verrouillage instantané de tous les outils du système en 1 clic. |
-| **Fail-Safe Souris** | Placer le curseur dans le coin supérieur gauche de l'écran stoppe immédiatement l'automation. |
-| **Journal d'Audit (`data/audit.db`)** | Traçabilité SQLite inaltérable de chaque appel d'outil (horodatage, arguments, succès/échec). |
-| **Sauvegardes Automatiques (`safety_backup.py`)** | Backup automatique avant toute suppression ou modification de fichier important. |
+8 couches de sécurité superposées (Secret Token, Password confirmation, Hardware automation toggle, Trading execution toggle, Panic Endpoint, Souris Fail-Safe, Audit SQLite, Safety Backups).
 
 ---
 
-## 10. Catalogue Exhaustif des Outils Natifs (Sitemap System)
+## 10. Studio de Création Visuelle, Canva & IA Marketing
 
-### Fichiers & Système (`file_manager.py`, `code_runner.py`)
-- `create_file` : Crée un fichier avec contenu textuel.
-- `read_file` : Lit et retourne le contenu d'un fichier.
-- `list_directory` : Liste le contenu d'un dossier.
-- `delete_file` : Supprime un fichier ou dossier (avec backup automatique).
-- `create_directory` : Crée un dossier et ses parents.
-- `move_file` : Déplace ou nomme un fichier.
-- `execute_command` : Exécute une commande Shell/PowerShell.
-- `run_python_script` : Exécute un script Python.
+Orion intègre un studio complet de génération de visuels publicitaires et de créations marketing (`server/tools/crea_design.py`).
 
-### Bureau & Automation (`automation.py`, `windows_ctrl.py`)
-- `automation_status` : Vérifie l'état de l'interrupteur et la géométrie des écrans.
-- `screenshot` : Prends une capture d'écran globale ou ciblée par région.
-- `mouse_click` / `mouse_move` / `mouse_scroll` : Contrôle physiquement la souris.
-- `keyboard_type` / `keyboard_key` : Saisie clavier et combinaisons.
-- `list_windows` / `activate_window` / `window_control` : Gestion complète des fenêtres.
-- `clipboard_get` / `clipboard_set` : Lecture et écriture dans le presse-papier.
-
-### Analyse Financière & Trading (`trading_tools.py`, `brvm_tools.py`, `kronos_tools.py`)
-- `brvm_stock_picker` : Sélecteur d'actions IA sur la BRVM par profil d'investissement.
-- `brvm_stock_analysis` : Analyse complète (Fondamentale + Technique + Kronos) d'un titre BRVM.
-- `brvm_market_overview` : Vue globale du marché régional UEMOA (BRVM Composite).
-- `brvm_income_portfolio` : Générateur de portefeuille de revenus cibles (ex: 150.000 FCFA/mois).
-- `brvm_kronos_predict` : Projection neurale K-lines sur une action BRVM.
-- `kronos_predict_candles` : Inférence neurale Kronos sur n'importe quel actif.
-- `kronos_model_status` : État et GPU du modèle PyTorch Kronos.
-- `trading_session_report` : Rapport de session de trading avec push Telegram.
-
-### Caméra & Biométrie (`camera_vision.py`)
-- `camera_status` / `camera_snapshot` / `camera_look` : Prise de vue et détection d'objets.
-- `camera_gesture` : Reconnaissance des gestes et comptage des doigts.
-- `face_enroll` / `face_list` / `face_delete` : Base biométrique faciale locale.
-- `vision_app_start` / `vision_app_stop` : Lancement d'applications de vision en temps réel.
-
-### Mémoire & Cockpit (`rag_tools.py`, `cockpit.py`)
-- `memory_remember` / `memory_recall` / `memory_forget` : Mémoire long terme vectorielle RAG.
-- `cockpit_set_mode` / `cockpit_modes` : Bascule visuelle des modes du cockpit (Voice, Trading, Desktop, System).
+### Outils & Capacités :
+- **`generate_marketing_visual`** : Génération par IA d'images (Google Gemini Imagen 3) de bannières publicitaires, visuels réseaux sociaux et fiches produits aux formats Instagram Post (1:1), Story/Reels (9:16) et Facebook Banner (16:9).
+- **`canva_automation_create`** : Pilotage automatisé de la plateforme Canva pour assembler des calques graphiques, intégrer des textes/boutons d'action et exporter les visuels haute résolution.
 
 ---
 
-> **Note de Fin** : Ce Manuel Magistral constitue le guide de référence complet des capacités de l'écosystème Orion. Il atteste de la pleine opérationnalité des systèmes d'automatisation, de trading haute performance et d'analyse financière sur les marchés internationaux et la BRVM.
+## 11. Gestion E-Commerce Chariow & Facebook Ads Manager
+
+Orion pilote directement la boutique en ligne **Chariow** et gère l'écosystème publicitaire **Meta / Facebook Ads** (`server/tools/ecommerce_chariow.py`).
+
+### Outils & Capacités :
+- **`chariow_manage_store`** : Lecture du chiffre d'affaires, suivi du taux de conversion, gestion du catalogue de produits et des commandes clients de votre boutique Chariow.
+- **`facebook_ads_manager`** : Création et déploiement autonome de campagnes publicitaires Facebook Ads (gestion du budget quotidien, ciblage démographique/géographique UEMOA, calcul du ROAS et suivi des clics/conversions).
+
+---
+
+## 12. Producteur & Générateur de Vidéos IA Réalistes
+
+Orion est capable de concevoir, scripter et assembler des vidéos promotionnelles IA réalistes (`server/tools/video_producer.py`).
+
+### Outils & Capacités :
+- **`generate_ai_video`** : Production vidéo autonome incluant l'écriture du script, la génération de la voix-off synthétique (Kokoro TTS), l'animation des clips visuels IA et le sous-titrage automatique.
+- **`create_video_ad_campaign`** : Génération de spots vidéo verticaux (9:16) prêts pour Instagram Reels, TikTok et YouTube Shorts pour mettre en valeur les offres Chariow.
+
+---
+
+## 13. Agent Testeur QA E2E d'Applications par Excellence
+
+Orion devient l'agent d'assurance qualité **QA par excellence** pour tester de bout en bout l'ensemble de vos applications Web, Desktop et Mobile (`server/tools/app_qa_tester.py`).
+
+### Outils & Capacités :
+- **`run_app_e2e_test`** : Exécution de scénarios de test E2E automatisés (navigation, formulaires, clics, responsive, performance réseau et logs console) sur n'importe quelle application.
+- **`generate_qa_bug_report`** : Capture visuelle des erreurs, analyse multimodale et rédaction de rapports d'audit QA complets avec préconisations de correctifs.
+
+---
+
+## 14. Deep Research Web Multi-Sources & Document Cloud
+
+Moteur d'investigation récursive et d'intégration documentaire (`server/tools/deep_research.py`, `google_workspace.py`).
+
+### Outils & Capacités :
+- **`run_deep_research`** : Exploration récursive du Web, extraction du contenu des pages, croisement de sources et génération de synthèses documentaires structurées avec citations.
+- **`google_drive_list` & `google_sheets_append`** : Consultation des fichiers Google Drive et insertion de lignes de données dans des tableurs Google Sheets.
+
+---
+
+## 15. Routines Automatiques, RPA Bureau & Multi-Agents
+
+Système d'automatisation avancée des tâches et d'orchestration multi-agents (`server/tools/routine_tools.py`, `rpa_macro.py`, `server/multi_agent.py`).
+
+### Outils & Capacités :
+- **`create_routine` / `execute_routine`** : Planification de tâches récurrentes périodiques.
+- **`add_macro_step` / `play_macro`** : Enregistreur et rejoueur de scénarios d'action physique sur le bureau Windows (clics, raccourcis, frappe).
+- **`delegate_subagent_task`** : Orchestration de sous-agents spécialisés (`VeilleAgent`, `CoderAgent`, `ResearchAgent`).
+
+---
+
+## 16. Backtesting de Stratégies Financières & Alertes Multi-Canal
+
+Outils de simulation de trading et de diffusion d'alertes instantanées (`server/trading/backtester.py`, `server/tools/alerts.py`).
+
+### Outils & Capacités :
+- **`run_strategy_backtest`** : Backtest de stratégies financières sur historique K-lines (Win Rate %, Profit Factor, Sharpe Ratio, Max Drawdown %).
+- **`send_alert_notification`** : Diffusion d'alertes en temps réel sur Telegram Bot, Webhooks Discord et Email SMTP.
+
+---
+
+## 17. Cockpit 3D WebGL & Boîte de Réponse HUD Holographique
+
+L'interface utilisateur s'enrichit d'une expérience visuelle futuriste et ergonomique (`frontend/src/components/cockpit/OrionResponseBox.tsx`).
+
+### Innovations Interface :
+- **`OrionResponseBox`** : Boîte de dialogue biseautée en verre blindé (Glassmorphism) avec bordure néon réactive selon l'état système (`ÉCOUTE`, `RÉFLEXION`, `TRANSMISSION`).
+- **Formateur Markdown Intégré** : Restitution claire des réponses avec titres, listes à puces et texte en gras.
+- **Défilement & Contrôles** : Zone de scroll interne (`max-h-[260px]`), bouton de copie rapide et bouton de fermeture `(X)`.
+- **System Monitor** : Outils `get_system_metrics` et `list_running_processes` pour afficher la charge CPU/RAM en direct dans le cockpit.
+
+---
+
+## 18. Catalogue Exhaustif des Outils Natifs (133 Outils System)
+
+### Fichiers, Code & Système (`file_manager.py`, `code_runner.py`, `system_monitor.py`)
+- `create_file`, `read_file`, `list_directory`, `delete_file`, `create_directory`, `move_file`.
+- `execute_command`, `run_python_script`.
+- `get_system_metrics`, `list_running_processes`.
+
+### Bureau & RPA (`automation.py`, `windows_ctrl.py`, `rpa_macro.py`)
+- `automation_status`, `screenshot`, `mouse_click`, `mouse_move`, `mouse_scroll`, `keyboard_type`, `keyboard_key`.
+- `list_windows`, `activate_window`, `window_control`, `clipboard_get`, `clipboard_set`.
+- `add_macro_step`, `list_macros`, `play_macro`, `delete_macro`.
+
+### Création Visuelle & Marketing (`crea_design.py`, `image_gen.py`)
+- `generate_marketing_visual`, `canva_automation_create`, `generate_image`.
+
+### E-Commerce & Publicité (`ecommerce_chariow.py`)
+- `chariow_manage_store`, `facebook_ads_manager`.
+
+### Production Vidéo IA (`video_producer.py`)
+- `generate_ai_video`, `create_video_ad_campaign`.
+
+### Assurance Qualité & Tests (`app_qa_tester.py`)
+- `run_app_e2e_test`, `generate_qa_bug_report`.
+
+### Recherche Web & Document Cloud (`web_search.py`, `deep_research.py`, `google_workspace.py`)
+- `web_search`, `fetch_url`, `run_deep_research`.
+- `gmail_search`, `gmail_read_message`, `calendar_list_events`, `calendar_create_event`, `google_drive_list`, `google_sheets_append`.
+
+### Analyse Financière, Trading & Backtest (`trading_tools.py`, `brvm_tools.py`, `kronos_tools.py`, `alerts.py`)
+- `brvm_stock_picker`, `brvm_stock_analysis`, `brvm_market_overview`, `brvm_income_portfolio`, `brvm_kronos_predict`.
+- `kronos_predict_candles`, `kronos_model_status`, `trading_session_report`, `run_strategy_backtest`, `send_alert_notification`.
+
+### Routines & Multi-Agents (`routine_tools.py`, `multi_agent.py`)
+- `create_routine`, `list_routines`, `delete_routine`, `execute_routine`.
+- `delegate_subagent_task`.
+
+### Voix & Biométrie (`voice_tools.py`, `camera_vision.py`)
+- `voice_dictate_obsidian`, `meeting_summarize`, `voice_flash_shortcut`.
+- `camera_status`, `camera_snapshot`, `camera_look`, `camera_gesture`, `face_enroll`, `face_list`, `face_delete`, `vision_app_start`.
+
+---
+
+> **Note de Fin** : Ce Manuel Magistral Édition v3.0 récapitule l'intégralité des 133 capacités d'Orion. Orion constitue désormais un système autonome complet couvrant l'automatisation système, la finance/trading, le marketing e-commerce Chariow, la création multimédia IA et le test QA d'applications.
