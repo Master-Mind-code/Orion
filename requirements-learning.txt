@@ -1,0 +1,21 @@
+# Dépendances de la base de connaissances évolutive d'Orion.
+# Installe avec : pip install -r requirements-learning.txt
+#
+# Le socle (vectorisation, recherche sémantique) vit dans requirements-rag.txt :
+# sans lui, aucun tool learn_* ni knowledge_* ne fonctionne.
+#   pip install -r requirements-rag.txt
+#
+# Ingestion des pages web : httpx + beautifulsoup4 + lxml sont déjà tirés par
+# requirements.txt et requirements-extras.txt.
+#
+# Ingestion des vidéos, deux voies :
+#   1. sous-titres publiés — youtube-transcript-api, instantané, sans téléchargement
+#   2. transcription audio — yt-dlp télécharge la piste, faster-whisper la transcrit
+#
+# La voie 2 exige AUSSI ffmpeg, qui n'est pas un paquet pip. Sur Windows :
+#   winget install Gyan.FFmpeg
+# puis rouvrir le terminal pour que le PATH soit rechargé.
+# faster-whisper est fourni par requirements-voice.txt.
+
+youtube-transcript-api>=1.2.0
+yt-dlp>=2025.1.1

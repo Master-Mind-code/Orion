@@ -88,6 +88,15 @@ async def _on_startup():
     except Exception as exc:
         print(f"[startup!] Erreur auto_indexer: {exc}")
 
+    # Apprentissage au fil de l'eau : tout document déposé dans
+    # data/knowledge_inbox est ingéré sans intervention.
+    if get_env("KNOWLEDGE_INBOX_WATCH", "true").lower() not in ("false", "0", "off"):
+        try:
+            from server.memory.knowledge import start_inbox_watcher
+            start_inbox_watcher(interval_sec=float(get_env("KNOWLEDGE_INBOX_INTERVAL", "120")))
+        except Exception as exc:
+            print(f"[startup!] Erreur surveillance connaissances: {exc}")
+
     # Callback pour pousser les demandes de confirmation au client WebSocket
     def _push_confirm(device_id: str, payload: dict) -> bool:
         session = controllers.get(device_id)

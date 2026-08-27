@@ -4,6 +4,7 @@ Contient les handlers utilisables par l'orchestrateur d'Orion.
 """
 
 from server.trading.brvm_engine import get_brvm_engine
+from server.trading import brvm_live
 
 
 def brvm_stock_picker_tool(input_dict: dict) -> dict:
@@ -68,5 +69,86 @@ def brvm_kronos_predict_tool(input_dict: dict) -> dict:
     pred_len = int(input_dict.get("pred_len", 12))
     engine = get_brvm_engine()
     return engine.run_kronos_forecast_for_stock(symbol, pred_len=pred_len)
+
+
+def brvm_live_quote_tool(input_dict: dict) -> dict:
+    """
+    Cote en direct d'une ou plusieurs valeurs de la BRVM (cours, variation, volume).
+
+    Réponse légère, sans scoring ni prédiction : à utiliser pour répondre à
+    « combien vaut X ? » sans déclencher l'analyse complète.
+
+    Params:
+        symbols: Liste de codes ou chaîne séparée par des virgules (ex: 'SNTS,ORAC').
+                 Vide = toute la cote.
+    """
+    raw = input_dict.get("symbols") or []
+    if isinstance(raw, str):
+        raw = [s for s in raw.replace(";", ",").split(",") if s.strip()]
+    wanted = {s.strip().upper() for s in raw}
+
+    engine = get_brvm_engine()
+    stocks = engine.data.get("stocks", [])
+    if wanted:
+        stocks = [s for s in stocks if s.get("symbol", "").upper() in wanted]
+
+    quotes = [{
+        "symbol": s.get("symbol"),
+        "name": s.get("name"),
+        "price_xof": s.get("price_xof"),
+        "change_pct": s.get("change_pct"),
+        "previous_close_xof": s.get("previous_close_xof"),
+        "open_xof": s.get("open_xof"),
+        "volume": s.get("volume"),
+        "volume_xof": s.get("volume_xof"),
+        "market_cap_xof": s.get("market_cap_xof"),
+        "sector": s.get("sector"),
+        "country": s.get("country"),
+    } for s in stocks]
+
+    unknown = sorted(wanted - {q["symbol"] for q in quotes}) if wanted else []
+
+    return {
+        "success": bool(quotes),
+        "currency": "XOF",
+        "quotes_count": len(quotes),
+        "quotes": quotes,
+        "unknown_symbols": unknown,
+        "index": engine.data.get("index", {}),
+        "data_provenance": engine._provenance(),
+        "error": f"Aucune valeur trouvée pour : {', '.join(unknown)}" if not quotes else None,
+    }
+
+
+def brvm_market_refresh_tool(input_dict: dict) -> dict:
+    """
+    Force la récupération de la cote BRVM et rapporte l'état de chaque source.
+
+    Params:
+        check_sources: Tester chaque plateforme une à une et rapporter son état
+                       (défaut: False — plus lent, une requête par source).
+    """
+    check_sources = bool(input_dict.get("check_sources", False))
+
+    engine = get_brvm_engine()
+    try:
+        engine.refresh(force=True)
+        refreshed = True
+        error = None
+    except Exception as exc:
+        refreshed = False
+        error = f"{type(exc).__name__}: {exc}"
+
+    result = {
+        "success": refreshed,
+        "error": error,
+        "stocks_loaded": len(engine.data.get("stocks", [])),
+        "index": engine.data.get("index", {}),
+        "sources_used": engine.data.get("sources", {}),
+        "data_provenance": engine._provenance(),
+    }
+    if check_sources:
+        result["source_health"] = brvm_live.source_health()
+    return result
 
 

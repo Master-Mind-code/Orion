@@ -65,6 +65,9 @@ DEFAULT_DANGEROUS: dict[str, str] = {
     "termux_send_sms":   "envoi de SMS depuis le téléphone",
     "termux_call":       "appel téléphonique",
     "calendar_create_event": "création d'un événement Google Calendar",
+    "send_alert_notification": "envoi d'une alerte vers Telegram / Discord / Email",
+    # Engage un budget publicitaire réel sur le compte Meta
+    "facebook_ads_manager": "création ou modification d'une campagne Facebook Ads",
     # Gmail : lecture nécessite déjà OAuth, mais on confirme la lecture
     # de contenu d'email (potentiellement sensible)
     "gmail_read_message": "lecture du contenu d'un email",

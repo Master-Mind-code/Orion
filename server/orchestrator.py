@@ -1325,6 +1325,582 @@ TOOLS = [
             "required": ["symbol"],
         },
     },
+
+    {
+        "name": "brvm_live_quote",
+        "description": "Cote en direct de la BRVM : cours, variation du jour, volume et capitalisation "
+                       "d'une ou plusieurs valeurs. Données réelles relevées sur brvm.org, différées de "
+                       "15 minutes pendant la séance. Réponse légère — pour une recommandation d'achat, "
+                       "utilise brvm_stock_analysis.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbols": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Codes des valeurs (ex: ['SNTS', 'ORAC', 'SGBC']). "
+                                   "Omettre pour obtenir les 47 valeurs de la cote.",
+                },
+            },
+        },
+    },
+    {
+        "name": "brvm_market_refresh",
+        "description": "Force le rechargement de la cote BRVM depuis les plateformes de marché, en "
+                       "contournant le cache de 15 minutes. Rapporte le nombre de valeurs chargées et "
+                       "l'état de chaque source. À utiliser si les données semblent datées.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "check_sources": {
+                    "type": "boolean",
+                    "description": "Tester chaque plateforme séparément et rapporter son état "
+                                   "(plus lent : une requête par source).",
+                    "default": False,
+                },
+            },
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Base de connaissances évolutive
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "learn_from_source",
+        "description": "Fait apprendre une source à Orion et l'ajoute durablement à sa base de "
+                       "connaissances. Accepte indifféremment : un chemin de fichier (PDF, DOCX, TXT, "
+                       "MD, CSV, code...), un dossier entier, une URL de page web, un lien de vidéo "
+                       "(sous-titres, ou transcription audio à défaut), un fichier audio/vidéo local, "
+                       "ou du texte brut. Le contenu devient consultable par knowledge_teach et "
+                       "memory_recall. Ne modifie pas le modèle : c'est une mémoire, pas un "
+                       "ré-entraînement.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "Chemin, dossier, URL, lien vidéo, ou le texte à retenir directement.",
+                },
+                "namespace": {
+                    "type": "string",
+                    "description": "Base thématique de rangement (ex: 'connaissances', 'trading', 'marketing').",
+                    "default": "connaissances",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Étiquettes pour retrouver et filtrer la source plus tard.",
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Code langue de la vidéo si connu (ex: 'fr', 'en'). Sinon auto-détecté.",
+                },
+                "cookies_from_browser": {
+                    "type": "string",
+                    "enum": ["firefox", "chrome", "edge", "brave", "opera"],
+                    "description": "À n'utiliser que si une vidéo est refusée pour accès anonyme "
+                                   "bloqué : yt-dlp réutilise la session du navigateur. Demande "
+                                   "l'accord de l'utilisateur avant de t'en servir. Échoue sur "
+                                   "Chrome/Edge/Brave sous Windows (cookies chiffrés depuis "
+                                   "Chromium 127) : préférer cookies_file dans ce cas.",
+                },
+                "cookies_file": {
+                    "type": "string",
+                    "description": "Chemin d'un export cookies.txt au format Netscape. Alternative "
+                                   "fiable à cookies_from_browser quand le navigateur chiffre ou "
+                                   "verrouille ses cookies.",
+                },
+                "force": {
+                    "type": "boolean",
+                    "description": "Réapprendre une source déjà connue (duplique ses fragments).",
+                    "default": False,
+                },
+            },
+            "required": ["source"],
+        },
+    },
+    {
+        "name": "learn_from_topic",
+        "description": "Orion part chercher lui-même de la documentation sur un sujet, croise plusieurs "
+                       "sources web et indexe tout dans sa base de connaissances. À utiliser quand "
+                       "l'utilisateur donne un thème à creuser plutôt que des liens précis.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "Sujet à creuser (ex: 'fiscalité des dividendes UEMOA')"},
+                "namespace": {"type": "string", "description": "Base thématique de rangement.", "default": "connaissances"},
+                "max_sources": {"type": "integer", "description": "Nombre de pages à lire et indexer (1 à 6).", "default": 4},
+                "depth": {"type": "integer", "description": "Profondeur d'exploration : 1 ou 2.", "default": 2},
+                "tags": {"type": "array", "items": {"type": "string"}, "description": "Étiquettes à appliquer."},
+            },
+            "required": ["topic"],
+        },
+    },
+    {
+        "name": "learn_from_inbox",
+        "description": "Ingère tout ce que l'utilisateur a déposé dans le dossier de dépôt "
+                       "(data/knowledge_inbox). Les fichiers appris sont déplacés dans un sous-dossier "
+                       "'_traites' et jamais supprimés. C'est le mécanisme d'alimentation au fil de l'eau.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "namespace": {"type": "string", "description": "Base thématique de rangement.", "default": "connaissances"},
+                "move_processed": {
+                    "type": "boolean",
+                    "description": "Déplacer les fichiers traités pour ne pas les réapprendre au passage suivant.",
+                    "default": True,
+                },
+                "max_files": {"type": "integer", "description": "Plafond de fichiers par passage.", "default": 50},
+            },
+        },
+    },
+    {
+        "name": "knowledge_teach",
+        "description": "Rassemble tout ce qu'Orion a appris sur un sujet, avec ses sources, pour former "
+                       "l'utilisateur ou appliquer ce savoir. À appeler AVANT de répondre sur un domaine "
+                       "que l'utilisateur a fait apprendre à Orion — sinon la réponse ignore sa propre "
+                       "documentation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "Sujet sur lequel restituer le savoir acquis."},
+                "namespace": {"type": "string", "description": "Base thématique à interroger.", "default": "connaissances"},
+                "depth": {"type": "integer", "description": "Nombre d'extraits à rassembler (1 à 20).", "default": 8},
+                "min_score": {"type": "number", "description": "Score de similarité minimum (0 à 1).", "default": 0.25},
+            },
+            "required": ["topic"],
+        },
+    },
+    {
+        "name": "knowledge_status",
+        "description": "État de la base de connaissances : sources apprises, types, dates, volume indexé "
+                       "et fichiers en attente dans le dossier de dépôt.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "namespace": {"type": "string", "description": "Restreindre à une base thématique."},
+            },
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Monitoring système
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "get_system_metrics",
+        "description": "Retourne les métriques système actuelles de la machine : charge CPU, mémoire RAM, "
+                       "occupation disque, système d'exploitation et uptime.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Recherche approfondie & Google Workspace
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "run_deep_research",
+        "description": "Recherche approfondie multi-sources sur un sujet : explore le Web, lit et croise le contenu "
+                       "de plusieurs pages, puis produit une synthèse structurée avec ses sources.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Sujet ou question d'investigation"},
+                "max_sources": {"type": "integer", "description": "Nombre de pages web à lire en profondeur (1 à 6)", "default": 4},
+                "depth": {"type": "integer", "description": "Niveau d'approfondissement : 1 ou 2", "default": 2},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "google_drive_list",
+        "description": "Liste les fichiers récents du Google Drive de l'utilisateur, avec filtre de recherche optionnel.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_results": {"type": "integer", "description": "Nombre maximum de fichiers à retourner (1 à 50)", "default": 10},
+                "query": {"type": "string", "description": "Filtre de recherche sur le nom des fichiers", "default": ""},
+            },
+        },
+    },
+    {
+        "name": "google_sheets_append",
+        "description": "Ajoute une ligne de données à la fin d'une feuille Google Sheets.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "spreadsheet_id": {"type": "string", "description": "ID du tableur Google Sheets (visible dans son URL)"},
+                "sheet_name": {"type": "string", "description": "Nom de l'onglet cible", "default": "Sheet1"},
+                "row_values": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Valeurs de la ligne à insérer, dans l'ordre des colonnes",
+                },
+            },
+            "required": ["spreadsheet_id"],
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Backtest & alertes multi-canal
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "run_strategy_backtest",
+        "description": "Backteste une stratégie d'investissement sur historique et retourne le win rate, "
+                       "le profit factor, le ratio de Sharpe et le drawdown maximum.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "Symbole à tester (ex: 'SONATEL', 'SNTS')", "default": "SONATEL"},
+                "initial_capital": {"type": "number", "description": "Capital de départ de la simulation", "default": 1000000.0},
+                "strategy_type": {"type": "string", "description": "Type de stratégie (ex: 'sma_crossover')", "default": "sma_crossover"},
+                "period_days": {"type": "integer", "description": "Profondeur d'historique en jours", "default": 60},
+                "stop_loss_pct": {"type": "number", "description": "Stop loss en pourcentage", "default": 2.5},
+                "take_profit_pct": {"type": "number", "description": "Take profit en pourcentage", "default": 5.0},
+            },
+        },
+    },
+    {
+        "name": "send_alert_notification",
+        "description": "Envoie une alerte vers l'extérieur : Telegram, Discord, Email SMTP, notification système, ou tous les canaux.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Titre de l'alerte"},
+                "message": {"type": "string", "description": "Corps du message"},
+                "channel": {
+                    "type": "string",
+                    "enum": ["telegram", "discord", "email", "system", "all"],
+                    "description": "Canal de diffusion",
+                    "default": "all",
+                },
+                "severity": {
+                    "type": "string",
+                    "enum": ["info", "warning", "critical"],
+                    "description": "Niveau de gravité",
+                    "default": "info",
+                },
+            },
+            "required": ["title", "message"],
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Routines planifiées, macros RPA & multi-agents
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "create_routine",
+        "description": "Crée une routine automatique planifiée qui exécutera périodiquement un outil Orion.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Nom explicite de la routine (ex: 'Scan BRVM Matinal')"},
+                "schedule_description": {"type": "string", "description": "Fréquence en langage naturel (ex: 'tous les jours à 08h00')"},
+                "tool_name": {"type": "string", "description": "Nom de l'outil Orion à exécuter"},
+                "tool_params": {"type": "object", "description": "Paramètres passés à l'outil lors de l'exécution"},
+            },
+            "required": ["name", "schedule_description", "tool_name"],
+        },
+    },
+    {
+        "name": "list_routines",
+        "description": "Liste toutes les routines automatiques enregistrées, avec leur planification et leur outil cible.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "delete_routine",
+        "description": "Supprime définitivement une routine planifiée à partir de son identifiant.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "routine_id": {"type": "string", "description": "Identifiant de la routine à supprimer"},
+            },
+            "required": ["routine_id"],
+        },
+    },
+    {
+        "name": "execute_routine",
+        "description": "Déclenche immédiatement et manuellement une routine enregistrée, sans attendre sa planification.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "routine_id": {"type": "string", "description": "Identifiant de la routine à exécuter"},
+            },
+            "required": ["routine_id"],
+        },
+    },
+    {
+        "name": "add_macro_step",
+        "description": "Ajoute une étape à une macro RPA de bureau (clic, double-clic, frappe de texte, raccourci clavier, pause). "
+                       "La macro est créée automatiquement si elle n'existe pas encore.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "macro_name": {"type": "string", "description": "Nom de la séquence (ex: 'ouvrir_calculatrice')"},
+                "action_type": {
+                    "type": "string",
+                    "enum": ["click", "double_click", "type_text", "hotkey", "wait"],
+                    "description": "Type d'action de l'étape",
+                },
+                "x": {"type": "integer", "description": "Coordonnée X à l'écran (pour 'click' / 'double_click')"},
+                "y": {"type": "integer", "description": "Coordonnée Y à l'écran (pour 'click' / 'double_click')"},
+                "text": {"type": "string", "description": "Texte à saisir (pour 'type_text')"},
+                "keys": {"type": "string", "description": "Combinaison de touches (pour 'hotkey', ex: 'ctrl+s')"},
+                "delay_after": {"type": "number", "description": "Pause en secondes après l'étape", "default": 0.5},
+            },
+            "required": ["macro_name", "action_type"],
+        },
+    },
+    {
+        "name": "list_macros",
+        "description": "Liste les macros RPA enregistrées et le nombre d'étapes de chacune.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "play_macro",
+        "description": "Rejoue une macro RPA étape par étape en prenant le contrôle de la souris et du clavier du bureau.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "macro_name": {"type": "string", "description": "Nom de la macro à exécuter"},
+            },
+            "required": ["macro_name"],
+        },
+    },
+    {
+        "name": "delete_macro",
+        "description": "Supprime définitivement une macro RPA enregistrée.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "macro_name": {"type": "string", "description": "Nom de la macro à supprimer"},
+            },
+            "required": ["macro_name"],
+        },
+    },
+    {
+        "name": "delegate_subagent_task",
+        "description": "Délègue une mission à un sous-agent Orion spécialisé : 'veille' (analyse marché et presse financière), "
+                       "'coder' (écriture de scripts et automatisation), 'research' (enquête multi-sources et synthèse).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "agent_role": {
+                    "type": "string",
+                    "enum": ["veille", "coder", "research"],
+                    "description": "Rôle du sous-agent à mobiliser",
+                },
+                "task_description": {"type": "string", "description": "Description précise de la mission confiée"},
+            },
+            "required": ["agent_role", "task_description"],
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Voix
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "voice_flash_shortcut",
+        "description": "Exécute un raccourci vocal prédéfini : 'alerte_rouge' (active le mode Panic), "
+                       "'etat_systeme' (métriques CPU/RAM), 'scan_brvm' (top actions BRVM).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "Commande flash (ex: 'alerte_rouge', 'etat_systeme', 'scan_brvm')",
+                },
+            },
+            "required": ["command"],
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Création visuelle & design
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "generate_marketing_visual",
+        "description": "Génère par IA un visuel publicitaire ou une créa marketing (bannière, post réseaux sociaux, "
+                       "fiche produit) au format demandé, avec slogan optionnel en surimpression.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "description": "Description de l'image souhaitée"},
+                "format_type": {
+                    "type": "string",
+                    "enum": ["instagram_post", "story_reels", "banner_fb"],
+                    "description": "Format de sortie : carré 1:1, vertical 9:16 ou bannière 16:9",
+                    "default": "instagram_post",
+                },
+                "text_overlay": {"type": "string", "description": "Texte ou slogan à superposer sur l'image", "default": ""},
+                "style": {
+                    "type": "string",
+                    "enum": ["modern_cyber", "minimalist", "luxury", "vibrant"],
+                    "description": "Direction artistique du visuel",
+                    "default": "modern_cyber",
+                },
+            },
+            "required": ["prompt"],
+        },
+    },
+    {
+        "name": "canva_automation_create",
+        "description": "Prépare et assemble une création sur Canva (calques, textes, boutons d'action) puis l'exporte en haute résolution.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "design_type": {"type": "string", "description": "Type de design (ex: 'Instagram Post', 'Facebook Banner', 'Flyer')", "default": "Instagram Post"},
+                "title": {"type": "string", "description": "Titre de la création Canva", "default": "Nouvelle Promo Chariow"},
+                "elements": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Éléments graphiques et textes à inclure dans le design",
+                },
+            },
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # E-commerce Chariow & Facebook Ads
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "chariow_manage_store",
+        "description": "Pilote la boutique e-commerce Chariow : tableau de bord (chiffre d'affaires, taux de conversion), "
+                       "liste des commandes, ajout de produit au catalogue.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["get_dashboard", "list_orders", "add_product", "update_stock"],
+                    "description": "Opération à effectuer sur la boutique",
+                    "default": "get_dashboard",
+                },
+                "product_name": {"type": "string", "description": "Nom du produit (requis pour 'add_product')", "default": ""},
+                "price": {"type": "number", "description": "Prix du produit en FCFA / EUR", "default": 0.0},
+                "category": {"type": "string", "description": "Catégorie du produit", "default": "Général"},
+            },
+        },
+    },
+    {
+        "name": "facebook_ads_manager",
+        "description": "Crée et gère les campagnes publicitaires Meta / Facebook Ads : lancement de campagne avec budget "
+                       "quotidien et ciblage, liste des campagnes, mise en pause, rapport de performance (CTR, ROAS).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["create_campaign", "list_campaigns", "pause_campaign", "get_ad_report"],
+                    "description": "Opération à effectuer sur le compte publicitaire",
+                    "default": "create_campaign",
+                },
+                "campaign_name": {"type": "string", "description": "Nom de la campagne publicitaire", "default": "Promo Chariow Facebook"},
+                "daily_budget": {"type": "number", "description": "Budget quotidien engagé en FCFA / EUR", "default": 10000.0},
+                "target_audience": {"type": "string", "description": "Ciblage démographique et géographique", "default": "Côte d'Ivoire & UEMOA 22-45 ans"},
+                "ad_creative_id": {"type": "string", "description": "Identifiant du visuel ou de la vidéo à diffuser", "default": ""},
+            },
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Production vidéo IA
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "generate_ai_video",
+        "description": "Produit une vidéo promotionnelle IA à partir d'un script : voix-off synthétique, "
+                       "clips visuels animés et sous-titrage automatique.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "script_text": {"type": "string", "description": "Texte de la voix-off du spot"},
+                "style": {
+                    "type": "string",
+                    "enum": ["realistic_cinematic", "3d_animation", "vlog_influencer", "tech_cyber"],
+                    "description": "Style visuel de la vidéo",
+                    "default": "realistic_cinematic",
+                },
+                "voice_gender": {
+                    "type": "string",
+                    "enum": ["female_fr", "male_fr"],
+                    "description": "Voix de la narration",
+                    "default": "female_fr",
+                },
+                "aspect_ratio": {
+                    "type": "string",
+                    "enum": ["9:16", "16:9", "1:1"],
+                    "description": "Format d'image : 9:16 Reels/TikTok, 16:9 YouTube, 1:1 Feed",
+                    "default": "9:16",
+                },
+                "duration_seconds": {"type": "integer", "description": "Durée approximative en secondes (5 à 60)", "default": 15},
+            },
+            "required": ["script_text"],
+        },
+    },
+    {
+        "name": "create_video_ad_campaign",
+        "description": "Génère une publicité vidéo courte clé en main pour un produit, optimisée pour la plateforme visée "
+                       "(script, voix-off, format vertical ou horizontal).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "product_name": {"type": "string", "description": "Nom du produit mis en avant"},
+                "target_platform": {
+                    "type": "string",
+                    "enum": ["Instagram Reels", "TikTok", "YouTube Shorts", "Facebook Feed"],
+                    "description": "Plateforme de diffusion visée",
+                    "default": "Instagram Reels",
+                },
+                "promo_offer": {"type": "string", "description": "Offre promotionnelle ou appel à l'action", "default": "-20% sur la boutique Chariow"},
+            },
+            "required": ["product_name"],
+        },
+    },
+
+    # ─────────────────────────────────────────────────────────────
+    # Assurance qualité & tests E2E
+    # ─────────────────────────────────────────────────────────────
+    {
+        "name": "run_app_e2e_test",
+        "description": "Lance une session de test QA de bout en bout sur une application web ou desktop : navigation, "
+                       "formulaires, inspection visuelle, logs console et réseau.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "target_url_or_app": {"type": "string", "description": "URL (ex: 'http://localhost:4200') ou nom de l'application desktop"},
+                "test_scenario": {
+                    "type": "string",
+                    "enum": ["full_navigation_and_forms", "auth_flow", "checkout_process", "responsive_mobile"],
+                    "description": "Scénario de test à dérouler",
+                    "default": "full_navigation_and_forms",
+                },
+                "screen_resolution": {"type": "string", "description": "Résolution d'écran de test (ex: '1920x1080')", "default": "1920x1080"},
+            },
+            "required": ["target_url_or_app"],
+        },
+    },
+    {
+        "name": "generate_qa_bug_report",
+        "description": "Rédige un rapport d'audit QA complet en Markdown à partir des anomalies détectées, "
+                       "avec gravité et actions correctives recommandées.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "app_name": {"type": "string", "description": "Nom de l'application auditée"},
+                "detected_issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "description": {"type": "string", "description": "Description de l'anomalie"},
+                            "severity": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"], "description": "Gravité"},
+                            "fix": {"type": "string", "description": "Correctif recommandé"},
+                        },
+                    },
+                    "description": "Anomalies identifiées lors des tests",
+                },
+            },
+            "required": ["app_name"],
+        },
+    },
 ]
 
 # Tools qui interagissent avec le matériel/OS et acceptent un target_device.
@@ -1476,8 +2052,37 @@ Tu es un expert reconnu de la BRVM (Bourse Régionale des Valeurs Mobilières - 
 Ta mission spécifique sur la BRVM est d'aider l'utilisateur à se constituer un portefeuille capable de générer 150.000 FCFA par mois (soit 1.800.000 FCFA / an) en dividendes et plus-values.
 - Pour construire un portefeuille sur-mesure visant cet objectif de 150.000 FCFA/mois, utilise brvm_income_portfolio.
 - Pour filtrer et recommander les meilleures actions à acheter, utilise brvm_stock_picker avec le profil souhaité (dividend, growth, value, balanced).
-- Pour analyser une valeur spécifique (ex: Sonatel - SNTS, Orange CI - ORAC, SGBCI - SGBIC, Coris Bank - CBI, Palmci - PALC, etc.), utilise brvm_stock_analysis.
+- Pour analyser une valeur spécifique (ex: Sonatel - SNTS, Orange CI - ORAC, SGBCI - SGBC, Coris Bank BF - CBIBF, Palmci - PALC, etc.), utilise brvm_stock_analysis.
+- Pour une simple question de cours ("combien vaut Sonatel ?"), utilise brvm_live_quote : c'est plus rapide et ça suffit.
 - Donne une recommandation nette (ACHAT FORT / ACHAT / CONSERVER), les ratios clés (PER, Rendement Dividende %, ROE) et la répartition exacte des titres à acheter.
+
+Discipline sur les données BRVM — ce sont des cours réels, traite-les comme tels :
+- Ne cite JAMAIS un cours BRVM de mémoire. Les cours bougent : lis-les avec brvm_live_quote ou brvm_stock_analysis.
+- Chaque réponse de ces tools contient `data_provenance`. Si `is_live` est false ou `stale` est true, dis-le explicitement à l'utilisateur avant de donner le moindre chiffre : il s'agit alors de cours de référence figés, pas du marché.
+- Les cours sont différés de 15 minutes pendant la séance. Précise-le quand tu donnes un cours en séance ouverte.
+- PER, ROE et marge nette ne sont publiés par aucune source de cote BRVM. Le champ `ratios_source` vaut alors "reference_statique" : présente-les comme des ordres de grandeur de référence, jamais comme des données de marché du jour.
+- Le champ `dividend_is_exceptional` signale une distribution non reproductible. Ne construis jamais une promesse de revenu récurrent dessus, et signale-le si l'utilisateur s'appuie sur cette valeur.
+- Si les données semblent datées, appelle brvm_market_refresh avant de conclure.
+
+═══ BASE DE CONNAISSANCES & APPRENTISSAGE CONTINU ═══
+Tu disposes d'une base de connaissances que l'utilisateur alimente et qui grandit avec le temps.
+
+Quand consulter :
+- Avant de répondre sur un domaine que l'utilisateur t'a fait apprendre (ses documents, ses formations, ses notes), appelle knowledge_teach. Répondre de mémoire générale alors que tu as sa documentation sous la main, c'est ignorer ce qu'il t'a transmis.
+- Si knowledge_teach ne renvoie rien d'exploitable, dis-le franchement et propose d'apprendre une source, plutôt que de combler le vide avec des généralités.
+- Cite toujours les sources qui viennent de ta base. L'utilisateur doit pouvoir remonter au document d'origine.
+
+Quand apprendre :
+- L'utilisateur te donne un fichier, un dossier, un lien ou une vidéo : learn_from_source. Un seul tool, quel que soit le type.
+- Il te donne un sujet à creuser sans lien précis : learn_from_topic — tu vas chercher toi-même.
+- Il dit avoir déposé des documents : learn_from_inbox.
+- Une conclusion durable ressort d'un échange ou d'une de tes analyses (une règle de gestion qu'il t'énonce, un arbitrage qu'il tranche, un résultat d'analyse qui servira plus tard) : retiens-la avec memory_remember. Ne retiens PAS le bavardage, ni ce qui est vrai seulement aujourd'hui, ni ce que le code dit déjà.
+- Avant d'apprendre, ne redemande pas confirmation si l'utilisateur vient de te donner la source : c'est justement ce qu'il attend.
+
+Ce que « apprendre » veut dire ici, et ce que ça ne veut pas dire :
+- Tu ranges du contenu dans une mémoire consultable. Tes réponses s'améliorent parce que tu retrouves plus de matière.
+- Tes poids de modèle ne changent PAS. Tu tournes sur des modèles hébergés chez Anthropic et Google, figés côté fournisseur. Ne dis jamais que tu « t'es ré-entraîné », que tu « as appris à un niveau profond » ou que tu « évolues » au sens du modèle : c'est faux et l'utilisateur mérite de savoir de quoi il dispose réellement.
+- Si l'utilisateur te demande de te fine-tuner ou de modifier ton propre modèle, explique cette limite au lieu de faire semblant.
 
 ═══ MISSION DE SURVIE : OBJECTIF 100.000 / JOUR ═══
 Ta mission prioritaire absolue est de propulser la performance d'Orion pour viser un objectif de 100.000 par jour.

@@ -272,6 +272,40 @@ def setup_default_jobs():
             "fn": _run_market_survival_scan,
         })
 
+    # Veille documentaire : Orion va chercher lui-même sur les sujets listés
+    # dans ORION_LEARNING_TOPICS et indexe ce qu'il trouve.
+    if get_env("LEARNING_TOPICS"):
+        h_l, m_l = _parse_time(get_env("LEARNING_TIME", "06:00") or "06:00", (6, 0))
+        SCHEDULER.register_job({
+            "id": "knowledge_watch",
+            "schedule": {"hour": h_l, "minute": m_l},
+            "enabled": True,
+            "fn": _run_knowledge_watch,
+        })
+
+
+def _run_knowledge_watch():
+    """Veille programmée : recherche et indexation sur les sujets configurés.
+
+    Les sujets viennent de ORION_LEARNING_TOPICS (séparés par des virgules).
+    Un sujet en échec ne doit pas empêcher les suivants d'être traités.
+    """
+    raw = get_env("LEARNING_TOPICS") or ""
+    topics = [t.strip() for t in raw.split(",") if t.strip()]
+    if not topics:
+        return
+
+    from server.memory.knowledge import learn_from_topic
+
+    namespace = get_env("LEARNING_NAMESPACE", "connaissances") or "connaissances"
+    for topic in topics:
+        try:
+            result = learn_from_topic(topic, namespace=namespace, max_sources=3)
+            print(f"[scheduler] Veille « {topic} » : {result.get('sources_learned', 0)} source(s), "
+                  f"{result.get('chunks_added', 0)} fragment(s) indexé(s).")
+        except Exception as exc:
+            print(f"[scheduler!] Veille « {topic} » échouée : {exc}")
+
 
 def _run_market_survival_scan():
     """Scanne les opportunités de marché pour alimenter la Mission Survie 100k."""

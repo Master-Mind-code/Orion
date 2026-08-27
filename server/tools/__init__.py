@@ -41,12 +41,20 @@ try:
 except ImportError:
     _MEMORY_HANDLERS = {}
 
+# Base de connaissances évolutive : ingestion de fichiers, pages web et vidéos.
+try:
+    from server.memory.knowledge import HANDLERS as _KNOWLEDGE_HANDLERS
+except ImportError:
+    _KNOWLEDGE_HANDLERS = {}
+
 from .brvm_tools import (
     brvm_stock_picker_tool,
     brvm_stock_analysis_tool,
     brvm_market_overview_tool,
     brvm_income_portfolio_tool,
-    brvm_kronos_predict_tool
+    brvm_kronos_predict_tool,
+    brvm_live_quote_tool,
+    brvm_market_refresh_tool,
 )
 
 _BRVM_HANDLERS = {
@@ -55,6 +63,8 @@ _BRVM_HANDLERS = {
     "brvm_market_overview": brvm_market_overview_tool,
     "brvm_income_portfolio": brvm_income_portfolio_tool,
     "brvm_kronos_predict": brvm_kronos_predict_tool,
+    "brvm_live_quote": brvm_live_quote_tool,
+    "brvm_market_refresh": brvm_market_refresh_tool,
 }
 
 from .system_monitor import HANDLERS as _SYS_MONITOR_HANDLERS
@@ -94,6 +104,7 @@ ALL_HANDLERS = {
     **_GOOGLE_HANDLERS,
     **_IMAGE_HANDLERS,
     **_MEMORY_HANDLERS,
+    **_KNOWLEDGE_HANDLERS,
     **_SYS_MONITOR_HANDLERS,
     **_ALERTS_HANDLERS,
     **_ROUTINE_HANDLERS,
